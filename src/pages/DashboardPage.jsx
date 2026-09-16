@@ -57,6 +57,7 @@ export default function DashboardPage() {
   });
 
   // Calculate 7-day global activity grid
+  const todayDateStr = getLocalDateString();
   const last7Days = getLastNWeeksDays(1).slice(-7);
   const globalActivity = last7Days.map((dateStr) => {
     // Check if any habit was completed on this date
@@ -72,8 +73,8 @@ export default function DashboardPage() {
     let status = 'none';
     if (anyCompleted) status = 'completed';
     else if (anyMissed) status = 'missed';
-    else if (dateStr === getLocalDateString()) status = 'pending';
-    else if (dateStr > getLocalDateString()) status = 'future';
+    else if (dateStr === todayDateStr) status = 'pending';
+    else if (dateStr > todayDateStr) status = 'future';
 
     return { dateStr, status };
   });

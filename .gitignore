@@ -22,7 +22,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment variables (sensitive)
 .env
+.env.local
+.env.*.local
+
+# Images accidentally committed
 *.jpeg
-*.jpg  
- 
+*.jpg
+*.png
+!public/**
+!src/assets/**

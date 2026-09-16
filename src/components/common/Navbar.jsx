@@ -218,7 +218,7 @@ export default function Navbar() {
               <Link
                 to="/signup"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block w-full text-center px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium shadow-sm min-h-[44px] flex items-center justify-center"
+                className="w-full text-center px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium shadow-sm min-h-[44px] flex items-center justify-center"
               >
                 Get Started
               </Link>
