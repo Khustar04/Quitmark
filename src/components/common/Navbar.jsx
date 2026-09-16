@@ -71,16 +71,29 @@ export default function Navbar() {
               <NotificationToggle />
               <ThemeToggle />
 
-              {/* Settings Link */}
+              {/* Profile Display */}
+              <div
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800"
+                title={user.email}
+              >
+                <div className="w-6 h-6 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                  <User className="w-3.5 h-3.5" />
+                </div>
+                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate max-w-[120px]">
+                  {user.email?.split('@')[0] || 'User'}
+                </span>
+              </div>
+
+              {/* Settings Link (Toggle) */}
               <Link
-                to="/settings"
+                to={location.pathname === '/settings' ? '/dashboard' : '/settings'}
                 className={`flex items-center justify-center w-9 h-9 rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 select-none ${
                   location.pathname === '/settings'
                     ? 'text-emerald-600 dark:text-emerald-400 border-emerald-500/40 bg-emerald-500/10'
                     : 'bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-emerald-500/40 hover:text-emerald-500'
                 }`}
-                title="Settings"
-                aria-label="Settings"
+                title={location.pathname === '/settings' ? 'Close Settings' : 'Settings'}
+                aria-label={location.pathname === '/settings' ? 'Close Settings' : 'Settings'}
               >
                 <Settings className="w-4 h-4" />
               </Link>
