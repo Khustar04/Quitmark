@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Flame, Check, X, Edit2, Trash2, RotateCcw, Loader2, Calendar } from 'lucide-react';
 import gsap from 'gsap';
 import { calculateHabitSummary } from '../../utils/progress/calculateHabitSummary';
-import { getLocalDateString } from '../../utils/streaks/dateUtils';
+import { useLocalDate } from '../../hooks/useLocalDate';
 
 export default function HabitCard({
   habit,
@@ -14,7 +14,7 @@ export default function HabitCard({
   isCheckingIn = false,
 }) {
   const [showStatusChange, setShowStatusChange] = useState(false);
-  const todayDateStr = getLocalDateString();
+  const todayDateStr = useLocalDate();
 
   // Find today's checkin if recorded
   const todayRecord = checkins.find((c) => c.check_in_date === todayDateStr);

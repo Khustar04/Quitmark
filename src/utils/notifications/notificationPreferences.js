@@ -1,6 +1,7 @@
 const PREFS_KEY = 'quitmark_notification_prefs';
 
 const defaultPreferences = {
+  enabled: false,
   streakReminders: true,
   morning: true,
   afternoon: true,

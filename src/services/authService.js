@@ -51,14 +51,39 @@ const ensureClient = () => {
 };
 
 /**
+ * Helper to add a timeout to a promise.
+ */
+const withTimeout = (promise, ms = 15000) => {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(
+        () => reject(new Error('Request timed out. Please check your Supabase SMTP configuration as the server took too long to respond.')),
+        ms
+      )
+    ),
+  ]);
+};
+
+/**
  * Signs up a user using email and password.
  */
 export const signUpWithEmail = async (email, password) => {
   ensureClient();
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-  });
+  const redirectUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/dashboard`
+      : '/dashboard';
+
+  const { data, error } = await withTimeout(
+    supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectUrl,
+      },
+    })
+  );
 
   if (error) {
     throw new Error(getFriendlyAuthErrorMessage(error));
@@ -144,4 +169,41 @@ export const onAuthStateChange = (callback) => {
     return { data: { subscription: { unsubscribe: () => {} } } };
   }
   return supabase.auth.onAuthStateChange(callback);
+};
+
+/**
+ * Sends a password reset email to the specified address.
+ */
+export const sendPasswordResetEmail = async (email) => {
+  ensureClient();
+  const redirectUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/reset-password`
+      : '/reset-password';
+
+  const { error } = await withTimeout(
+    supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl,
+    })
+  );
+
+  if (error) {
+    throw new Error(getFriendlyAuthErrorMessage(error));
+  }
+};
+
+/**
+ * Updates the user's password securely (requires an active session).
+ */
+export const updatePassword = async (newPassword) => {
+  ensureClient();
+  const { data, error } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+
+  if (error) {
+    throw new Error(getFriendlyAuthErrorMessage(error));
+  }
+
+  return data;
 };

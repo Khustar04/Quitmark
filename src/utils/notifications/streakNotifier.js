@@ -24,7 +24,7 @@ export const checkAndNotifyStreakRisks = (habits = [], checkinsByHabit = {}) => 
   if (getNotificationPermission() !== 'granted') return;
   
   const prefs = getNotificationPreferences();
-  if (!prefs.streakReminders) return;
+  if (!prefs.enabled || !prefs.streakReminders) return;
 
   habits.forEach((habit) => {
     if (!habit || !habit.id) return;

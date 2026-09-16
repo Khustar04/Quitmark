@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Plus, AlertCircle, RefreshCw, Check, Flame, Activity } from 'lucide-react';
+import { Plus, AlertCircle, RefreshCw } from 'lucide-react';
 import gsap from 'gsap';
 import { selectDashboardSummary } from '../store/selectors/habitSelectors';
+import DashboardSummaryCards from '../components/dashboard/DashboardSummaryCards';
 
 import {
   getHabits,
@@ -10,7 +11,6 @@ import {
   updateHabit,
   deleteHabit,
   getAllUserCheckins,
-  upsertTodayCheckin,
 } from '../services/habitService';
 import {
   setHabits,
@@ -18,14 +18,13 @@ import {
   updateHabitInState,
   removeHabitFromState,
   setCheckins,
-  setHabitCheckinOptimistic,
-  revertHabitCheckin,
   setLoading,
-  setCheckinLoading,
   setError,
   clearError,
 } from '../store/slices/habitsSlice';
-import { getLocalDateString, getLastNWeeksDays } from '../utils/streaks/dateUtils';
+import { useLocalDate } from '../hooks/useLocalDate';
+import { getLastNWeeksDays } from '../utils/streaks/dateUtils';
+import { useCheckin } from '../hooks/useCheckin';
 import { checkAndNotifyStreakRisks } from '../utils/notifications/streakNotifier';
 
 import HabitCard from '../components/dashboard/HabitCard';
@@ -44,6 +43,8 @@ export default function DashboardPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState(null);
   const [deletingHabit, setDeletingHabit] = useState(null);
+  
+  const { handleCheckin } = useCheckin();
 
   const containerRef = useRef(null);
   const headerRef = useRef(null);
@@ -57,7 +58,7 @@ export default function DashboardPage() {
   });
 
   // Calculate 7-day global activity grid
-  const todayDateStr = getLocalDateString();
+  const todayDateStr = useLocalDate();
   const last7Days = getLastNWeeksDays(1).slice(-7);
   const globalActivity = last7Days.map((dateStr) => {
     // Check if any habit was completed on this date
@@ -147,42 +148,9 @@ export default function DashboardPage() {
     dispatch(updateHabitInState(updated));
   };
 
-  // Habit deletion handler
   const handleDelete = async (id) => {
     await deleteHabit(id);
     dispatch(removeHabitFromState(id));
-  };
-
-  // Daily check-in handler with optimistic UI and graceful rollback
-  const handleCheckin = async (habitId, status) => {
-    const today = getLocalDateString();
-    const previousCheckins = checkinsByHabit[habitId] ? [...checkinsByHabit[habitId]] : [];
-
-    // 1. Optimistic Redux update
-    dispatch(
-      setHabitCheckinOptimistic({
-        habitId,
-        checkin: {
-          habit_id: habitId,
-          check_in_date: today,
-          status,
-        },
-      })
-    );
-    dispatch(setCheckinLoading({ habitId, loading: true }));
-
-    try {
-      // 2. Commit to Supabase
-      const saved = await upsertTodayCheckin(habitId, status);
-      // Synchronize exact server payload
-      dispatch(setHabitCheckinOptimistic({ habitId, checkin: saved }));
-    } catch (err) {
-      // 3. Rollback on failure
-      dispatch(revertHabitCheckin({ habitId, previousCheckins }));
-      dispatch(setError(err.message || 'Failed to record check-in. Rolled back.'));
-    } finally {
-      dispatch(setCheckinLoading({ habitId, loading: false }));
-    }
   };
 
   return (
@@ -264,66 +232,10 @@ export default function DashboardPage() {
         /* Habits Content with Overview Summary */
         <div className="space-y-8 flex-1">
           {/* Dashboard Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            
-            {/* Card 1: Highest Streak */}
-            <div className="px-5 py-4 rounded-2xl border border-zinc-200/80 dark:border-[#232936] bg-white dark:bg-[#0D0F17] shadow-sm flex flex-col justify-between">
-              <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 mb-2">
-                <Flame className="w-4 h-4 text-emerald-500" />
-                <span className="text-xs font-semibold uppercase tracking-wider font-mono">Highest Streak</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-zinc-900 dark:text-white">
-                  {dashboardSummary.bestCurrentStreak}
-                </span>
-                <span className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">days</span>
-              </div>
-            </div>
-
-            {/* Card 2: Total Check-ins / Completed */}
-            <div className="px-5 py-4 rounded-2xl border border-zinc-200/80 dark:border-[#232936] bg-white dark:bg-[#0D0F17] shadow-sm flex flex-col justify-between">
-              <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 mb-2">
-                <Check className="w-4 h-4 text-emerald-500" />
-                <span className="text-xs font-semibold uppercase tracking-wider font-mono">Total Completed</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-zinc-900 dark:text-white">
-                  {dashboardSummary.totalCompleted}
-                </span>
-                <span className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">check-ins</span>
-              </div>
-            </div>
-
-            {/* Card 3: 7-Day Activity Matrix (GitHub Style) */}
-            <div className="px-5 py-4 rounded-2xl border border-zinc-200/80 dark:border-[#232936] bg-white dark:bg-[#0D0F17] shadow-sm flex flex-col justify-between">
-              <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 mb-2">
-                <Activity className="w-4 h-4 text-emerald-500" />
-                <span className="text-xs font-semibold uppercase tracking-wider font-mono">Last 7 Days</span>
-              </div>
-              <div className="flex items-end gap-1.5 h-full">
-                {globalActivity.map((day, i) => {
-                  let colorClass = 'bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-[#232936]';
-                  
-                  if (day.status === 'completed') {
-                    colorClass = 'bg-emerald-500 border border-emerald-400 shadow-sm';
-                  } else if (day.status === 'missed') {
-                    colorClass = 'bg-red-500/70 border border-red-500/80';
-                  } else if (day.status === 'pending') {
-                    colorClass = 'bg-emerald-500/10 border border-emerald-500/30';
-                  }
-
-                  return (
-                    <div
-                      key={i}
-                      className={`w-6 h-6 rounded-sm ${colorClass}`}
-                      title={day.dateStr}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-
-          </div>
+          <DashboardSummaryCards 
+            dashboardSummary={dashboardSummary} 
+            globalActivity={globalActivity} 
+          />
 
           {/* Habit List Toolbar */}
           <div className="flex items-center justify-between mt-2">

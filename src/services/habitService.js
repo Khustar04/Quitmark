@@ -69,6 +69,9 @@ export const createHabit = async (name) => {
   if (!trimmedName) {
     throw new Error('Please enter a habit name.');
   }
+  if (trimmedName.length > 50) {
+    throw new Error('Habit name must be 50 characters or less.');
+  }
 
   const { data, error } = await supabase
     .from('habits')
@@ -95,6 +98,9 @@ export const updateHabit = async (id, name) => {
 
   if (!trimmedName) {
     throw new Error('Please enter a habit name.');
+  }
+  if (trimmedName.length > 50) {
+    throw new Error('Habit name must be 50 characters or less.');
   }
 
   const { data, error } = await supabase

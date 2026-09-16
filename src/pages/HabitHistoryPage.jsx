@@ -7,15 +7,12 @@ import gsap from 'gsap';
 import {
   getHabitById,
   getHabitCheckins,
-  upsertTodayCheckin,
 } from '../services/habitService';
 import {
-  setHabitCheckinOptimistic,
-  revertHabitCheckin,
-  setCheckinLoading,
-  setError,
+  setSingleHabit,
+  setSingleHabitCheckins,
 } from '../store/slices/habitsSlice';
-import { getLocalDateString } from '../utils/streaks/dateUtils';
+import { useCheckin } from '../hooks/useCheckin';
 import HabitHistory from '../components/history/HabitHistory';
 
 export default function HabitHistoryPage() {
@@ -26,17 +23,17 @@ export default function HabitHistoryPage() {
     (state) => state.habits
   );
 
-  const [fetchedHabit, setFetchedHabit] = useState(null);
-  const [fetchedCheckins, setFetchedCheckins] = useState(null);
+  const { handleCheckin } = useCheckin();
+
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [pageError, setPageError] = useState(null);
 
   const containerRef = useRef(null);
 
-  // Resolve habit and checkins preferring Redux cache
-  const habit = habits.find((h) => h.id === habitId) || fetchedHabit;
-  const checkins = checkinsByHabit[habitId] || fetchedCheckins || [];
+  // Rely strictly on Redux as the single source of truth
+  const habit = habits.find((h) => h.id === habitId) || null;
+  const checkins = checkinsByHabit[habitId] || [];
 
   // Load from Supabase if not in Redux or when visiting directly
   useEffect(() => {
@@ -54,8 +51,8 @@ export default function HabitHistoryPage() {
         if (!hData) {
           setNotFound(true);
         } else {
-          setFetchedHabit(hData);
-          setFetchedCheckins(cData);
+          dispatch(setSingleHabit(hData));
+          dispatch(setSingleHabitCheckins({ habitId, checkins: cData }));
         }
       } catch (err) {
         if (isMounted) {
@@ -73,7 +70,7 @@ export default function HabitHistoryPage() {
     return () => {
       isMounted = false;
     };
-  }, [habitId]);
+  }, [habitId, dispatch]);
 
   // Subtle GSAP entrance animation
   useEffect(() => {
@@ -95,47 +92,6 @@ export default function HabitHistoryPage() {
     return () => ctx.revert();
   }, [loading, notFound]);
 
-  // Handle today check-in directly from history page with optimistic UI and rollback
-  const handleCheckin = async (id, status) => {
-    const today = getLocalDateString();
-    const previousCheckins = [...checkins];
-
-    // 1. Optimistic update in Redux
-    dispatch(
-      setHabitCheckinOptimistic({
-        habitId: id,
-        checkin: {
-          habit_id: id,
-          check_in_date: today,
-          status,
-        },
-      })
-    );
-    dispatch(setCheckinLoading({ habitId: id, loading: true }));
-
-    // Also update local fallback if active
-    if (fetchedCheckins) {
-      setFetchedCheckins([
-        { habit_id: id, check_in_date: today, status },
-        ...fetchedCheckins.filter((c) => c.check_in_date !== today),
-      ]);
-    }
-
-    try {
-      // 2. Commit to Supabase
-      const saved = await upsertTodayCheckin(id, status);
-      dispatch(setHabitCheckinOptimistic({ habitId: id, checkin: saved }));
-    } catch (err) {
-      // 3. Rollback on failure
-      dispatch(revertHabitCheckin({ habitId: id, previousCheckins }));
-      if (fetchedCheckins) {
-        setFetchedCheckins(previousCheckins);
-      }
-      dispatch(setError(err.message || 'Failed to update check-in.'));
-    } finally {
-      dispatch(setCheckinLoading({ habitId: id, loading: false }));
-    }
-  };
 
   return (
     <div ref={containerRef} className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
