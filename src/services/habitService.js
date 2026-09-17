@@ -29,7 +29,7 @@ const getFriendlyDbErrorMessage = (error) => {
 const getAuthenticatedUser = async () => {
   if (!supabase) {
     throw new Error(
-      'Supabase environment variables are missing. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.'
+      'Supabase environment variables are missing. Please configure SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY.'
     );
   }
 

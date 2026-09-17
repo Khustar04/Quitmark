@@ -45,7 +45,7 @@ export const getFriendlyAuthErrorMessage = (error) => {
 const ensureClient = () => {
   if (!supabase) {
     throw new Error(
-      'Supabase environment variables are missing. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in your .env file.'
+      'Supabase environment variables are missing. Please configure SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY in your .env file.'
     );
   }
 };
