@@ -2,11 +2,12 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import ThemeToggle from '../common/ThemeToggle';
 
-export default function AuthLayout({ children, heading, supportingText, onBackAction }) {
+export default function AuthLayout({ children, heading, supportingText, onBackAction, hideNavigation }) {
   return (
     <div className="min-h-screen w-full flex flex-col bg-slate-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 transition-colors">
       {/* Top Header Bar */}
-      <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      {!hideNavigation && (
+        <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         {onBackAction ? (
           <button
             onClick={onBackAction}
@@ -24,15 +25,21 @@ export default function AuthLayout({ children, heading, supportingText, onBackAc
             <span>Back to Home</span>
           </Link>
         )}
-        <ThemeToggle />
-      </div>
+          <ThemeToggle />
+        </div>
+      )}
 
       {/* Center Auth Card */}
       <main className="flex-1 flex items-center justify-center px-4 py-8 sm:py-12">
         <div className="auth-card w-full max-w-md rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 shadow-xl dark:shadow-2xl dark:shadow-black/40 p-6 sm:p-8 transition-colors">
           {/* Brand Mark */}
           <div className="text-center mb-6">
-            {onBackAction ? (
+            {hideNavigation ? (
+              <div className="inline-flex items-center gap-2 font-bold text-xl tracking-tight text-zinc-900 dark:text-white mb-4">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                <span>Quitmark</span>
+              </div>
+            ) : onBackAction ? (
               <button
                 onClick={onBackAction}
                 className="inline-flex items-center gap-2 font-bold text-xl tracking-tight text-zinc-900 dark:text-white mb-4 focus:outline-none"

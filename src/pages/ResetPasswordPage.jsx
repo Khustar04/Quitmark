@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
-import { AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { updatePassword } from '../services/authService';
 import supabase from '../lib/supabase';
 import AuthLayout from '../components/auth/AuthLayout';
@@ -10,19 +10,10 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const containerRef = useRef(null);
 
-  const handleExit = async (path) => {
-    try {
-      await supabase.auth.signOut();
-    } catch {
-      // Ignore errors during emergency signout
-    }
-    navigate(path);
-  };
 
   useEffect(() => {
     const prefersReducedMotion =
@@ -109,7 +100,7 @@ export default function ResetPasswordPage() {
 
       await updatePassword(password);
       await supabase.auth.signOut(); // Ensure temporary recovery session is destroyed
-      setSuccess(true);
+      navigate('/login', { state: { message: 'Password reset successfully. Please log in with your new password.' } });
     } catch (err) {
       setError(err.message || 'Failed to reset password. Please try again.');
     } finally {
@@ -117,39 +108,12 @@ export default function ResetPasswordPage() {
     }
   };
 
-  if (success) {
-    return (
-      <div ref={containerRef} className="w-full">
-        <AuthLayout
-          heading="Password Reset Successfully"
-          supportingText="Your password has been changed. You can now log in with your new password."
-          onBackAction={() => handleExit('/')}
-        >
-          <div className="w-full space-y-6">
-            <div className="text-center space-y-5 animate-in fade-in zoom-in-95 duration-300">
-              <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-500 mx-auto flex items-center justify-center">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-              <button
-                onClick={() => navigate('/login')}
-                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500/40 shadow-sm shadow-emerald-600/20"
-              >
-                <span>Continue to Login</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </AuthLayout>
-      </div>
-    );
-  }
-
   return (
     <div ref={containerRef} className="w-full">
       <AuthLayout
         heading="Create New Password"
         supportingText="Please enter your new password below."
-        onBackAction={() => handleExit('/')}
+        hideNavigation={true}
       >
         <div className="w-full space-y-6">
           {error && (
@@ -222,15 +186,6 @@ export default function ResetPasswordPage() {
               )}
             </button>
 
-            <div className="text-center pt-2">
-              <button
-                type="button"
-                onClick={() => handleExit('/login')}
-                className="text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors focus:outline-none"
-              >
-                Cancel and return to login
-              </button>
-            </div>
           </form>
         </div>
       </AuthLayout>

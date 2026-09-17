@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { signInWithEmail } from '../../services/authService';
 import { setAuth } from '../../store/slices/authSlice';
 import GoogleAuthButton from './GoogleAuthButton';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
@@ -15,6 +15,8 @@ export default function LoginForm() {
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
+  const successMessage = location.state?.message;
 
   const validate = () => {
     const errors = {};
@@ -56,6 +58,17 @@ export default function LoginForm() {
 
   return (
     <div className="space-y-5">
+      {/* Success Message Alert */}
+      {successMessage && (
+        <div
+          role="alert"
+          className="flex items-start gap-2.5 p-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm animate-in fade-in duration-200"
+        >
+          <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
+          <span>{successMessage}</span>
+        </div>
+      )}
+
       {/* Server Error Alert */}
       {serverError && (
         <div
