@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react';
 import { updatePassword } from '../services/authService';
@@ -14,6 +14,15 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const containerRef = useRef(null);
+
+  const handleExit = async (path) => {
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // Ignore errors during emergency signout
+    }
+    navigate(path);
+  };
 
   useEffect(() => {
     const prefersReducedMotion =
@@ -99,6 +108,7 @@ export default function ResetPasswordPage() {
       }
 
       await updatePassword(password);
+      await supabase.auth.signOut(); // Ensure temporary recovery session is destroyed
       setSuccess(true);
     } catch (err) {
       setError(err.message || 'Failed to reset password. Please try again.');
@@ -113,6 +123,7 @@ export default function ResetPasswordPage() {
         <AuthLayout
           heading="Password Reset Successfully"
           supportingText="Your password has been changed. You can now log in with your new password."
+          onBackAction={() => handleExit('/')}
         >
           <div className="w-full space-y-6">
             <div className="text-center space-y-5 animate-in fade-in zoom-in-95 duration-300">
@@ -138,6 +149,7 @@ export default function ResetPasswordPage() {
       <AuthLayout
         heading="Create New Password"
         supportingText="Please enter your new password below."
+        onBackAction={() => handleExit('/')}
       >
         <div className="w-full space-y-6">
           {error && (
@@ -211,12 +223,13 @@ export default function ResetPasswordPage() {
             </button>
 
             <div className="text-center pt-2">
-              <Link
-                to="/login"
-                className="text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
+              <button
+                type="button"
+                onClick={() => handleExit('/login')}
+                className="text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors focus:outline-none"
               >
                 Cancel and return to login
-              </Link>
+              </button>
             </div>
           </form>
         </div>
