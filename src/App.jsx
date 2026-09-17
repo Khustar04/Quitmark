@@ -49,6 +49,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Reset Password (completely isolated layout) */}
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+
         <Route path="/" element={<RootLayout />}>
           {/* Public Landing Page */}
           <Route index element={<LandingPage />} />
@@ -62,8 +65,6 @@ export default function App() {
             <Route path="forgot-password" element={<ForgotPasswordPage />} />
           </Route>
 
-          {/* Reset Password (needs to handle active recovery session, so it sits outside auth route wrappers) */}
-          <Route path="reset-password" element={<ResetPasswordPage />} />
 
           {/* Protected Routes (redirect to /login if unauthenticated) */}
           <Route element={<ProtectedRoute />}>
