@@ -28,3 +28,26 @@ export const requestNotificationPermission = async () => {
     return 'denied';
   }
 };
+
+export const sendNotification = (title, options = {}) => {
+  if (!isNotificationSupported() || Notification.permission !== 'granted') {
+    return false;
+  }
+
+  try {
+    const notification = new Notification(title, {
+      icon: '/favicon.ico',
+      ...options
+    });
+
+    notification.onclick = function() {
+      window.focus();
+      this.close();
+    };
+
+    return true;
+  } catch (error) {
+    console.error('Error sending notification:', error);
+    return false;
+  }
+};

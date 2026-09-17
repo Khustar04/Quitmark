@@ -33,23 +33,24 @@ const getAuthenticatedUser = async () => {
     );
   }
 
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) {
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error || !session?.user) {
     throw new Error('You must be logged in to perform this action.');
   }
 
-  return user;
+  return session.user;
 };
 
 /**
  * Fetches all habits for the authenticated user.
  */
 export const getHabits = async () => {
-  await getAuthenticatedUser();
+  const user = await getAuthenticatedUser();
 
   const { data, error } = await supabase
     .from('habits')
     .select('*')
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -93,7 +94,7 @@ export const createHabit = async (name) => {
  * Renames an existing habit.
  */
 export const updateHabit = async (id, name) => {
-  await getAuthenticatedUser();
+  const user = await getAuthenticatedUser();
   const trimmedName = (name || '').trim();
 
   if (!trimmedName) {
@@ -110,6 +111,7 @@ export const updateHabit = async (id, name) => {
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
+    .eq('user_id', user.id)
     .select()
     .single();
 
@@ -124,12 +126,13 @@ export const updateHabit = async (id, name) => {
  * Deletes a habit and its cascaded check-in history.
  */
 export const deleteHabit = async (id) => {
-  await getAuthenticatedUser();
+  const user = await getAuthenticatedUser();
 
   const { error } = await supabase
     .from('habits')
     .delete()
-    .eq('id', id);
+    .eq('id', id)
+    .eq('user_id', user.id);
 
   if (error) {
     throw new Error(getFriendlyDbErrorMessage(error));
@@ -142,11 +145,12 @@ export const deleteHabit = async (id) => {
  * Fetches all check-ins belonging to the authenticated user.
  */
 export const getAllUserCheckins = async () => {
-  await getAuthenticatedUser();
+  const user = await getAuthenticatedUser();
 
   const { data, error } = await supabase
     .from('habit_checkins')
     .select('*')
+    .eq('user_id', user.id)
     .order('check_in_date', { ascending: false });
 
   if (error) {
@@ -193,12 +197,13 @@ export const upsertTodayCheckin = async (habitId, status) => {
  * Fetches a single habit by ID belonging to the authenticated user.
  */
 export const getHabitById = async (id) => {
-  await getAuthenticatedUser();
+  const user = await getAuthenticatedUser();
 
   const { data, error } = await supabase
     .from('habits')
     .select('*')
     .eq('id', id)
+    .eq('user_id', user.id)
     .maybeSingle();
 
   if (error) {
@@ -212,12 +217,13 @@ export const getHabitById = async (id) => {
  * Fetches all check-in records for a specific habit belonging to the authenticated user.
  */
 export const getHabitCheckins = async (habitId) => {
-  await getAuthenticatedUser();
+  const user = await getAuthenticatedUser();
 
   const { data, error } = await supabase
     .from('habit_checkins')
     .select('*')
     .eq('habit_id', habitId)
+    .eq('user_id', user.id)
     .order('check_in_date', { ascending: false });
 
   if (error) {

@@ -102,10 +102,13 @@ export default function DashboardPage() {
     loadHabitData();
   }, [loadHabitData]);
 
+  const hasCheckedNotifications = useRef(false);
+
   // Trigger streak risk notifications after habits and checkins are loaded
   useEffect(() => {
-    if (!loading && habits.length > 0) {
+    if (!loading && habits.length > 0 && !hasCheckedNotifications.current) {
       checkAndNotifyStreakRisks(habits, checkinsByHabit);
+      hasCheckedNotifications.current = true;
     }
   }, [loading, habits, checkinsByHabit]);
 

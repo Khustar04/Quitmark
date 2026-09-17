@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { Menu, X, LogOut, LayoutDashboard, User, Settings } from 'lucide-react';
+import { Menu, X, LogOut, LayoutDashboard, User, Settings, Trophy } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import NotificationToggle from './NotificationToggle';
 import { signOut } from '../../services/authService';
@@ -66,6 +66,19 @@ export default function Navbar() {
               >
                 <LayoutDashboard className="w-4 h-4" />
                 <span>Dashboard</span>
+              </Link>
+
+              <Link
+                to="/leaderboard"
+                className={`inline-flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${
+                  location.pathname === '/leaderboard'
+                    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-900'
+                }`}
+                aria-label="Leaderboard"
+              >
+                <Trophy className="w-4 h-4" />
+                <span>Leaderboard</span>
               </Link>
 
               <NotificationToggle />
@@ -185,6 +198,19 @@ export default function Navbar() {
               >
                 <LayoutDashboard className="w-4 h-4" />
                 <span>Dashboard</span>
+              </Link>
+
+              <Link
+                to="/leaderboard"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium min-h-[44px] transition-colors ${
+                  location.pathname === '/leaderboard'
+                    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold'
+                    : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900'
+                }`}
+              >
+                <Trophy className="w-4 h-4" />
+                <span>Leaderboard</span>
               </Link>
               
               <Link

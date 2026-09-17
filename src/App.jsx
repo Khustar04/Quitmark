@@ -18,6 +18,7 @@ import PublicAuthRoute from './routes/PublicAuthRoute';
 import FaqPage from './pages/FaqPage';
 import ReportBugPage from './pages/ReportBugPage';
 import SettingsPage from './pages/SettingsPage';
+import LeaderboardPage from './pages/LeaderboardPage';
 
 export default function App() {
   const dispatch = useDispatch();
@@ -69,6 +70,7 @@ export default function App() {
           {/* Protected Routes (redirect to /login if unauthenticated) */}
           <Route element={<ProtectedRoute />}>
             <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="leaderboard" element={<LeaderboardPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="habits/:habitId" element={<HabitHistoryPage />} />
           </Route>

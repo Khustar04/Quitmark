@@ -13,6 +13,8 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const containerRef = useRef(null);
+  const isResettingRef = useRef(false);
+  const isValidRecoveryRef = useRef(false);
 
 
   useEffect(() => {
@@ -41,13 +43,15 @@ export default function ResetPasswordPage() {
 
     // Supabase will automatically process the hash/code in the URL.
     // We listen to the auth state change to catch the PASSWORD_RECOVERY event or the session establishment.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (!mounted) return;
       
-      if (session) {
-        // Session established successfully (either from hash or PKCE exchange)
+      if (event === 'PASSWORD_RECOVERY') {
+        isValidRecoveryRef.current = true;
         setError(null);
-      } else if (event === 'SIGNED_OUT') {
+      } else if (event === 'SIGNED_IN' && !isValidRecoveryRef.current) {
+        setError('You are already logged in. To change your password securely, please log out and request a new reset link.');
+      } else if (event === 'SIGNED_OUT' && !isResettingRef.current) {
         // If they get signed out, they don't have a valid recovery session
         setError('Your password reset link is invalid or has expired. If you opened the link in a different browser than where you requested it, please copy the link and open it in the original browser.');
       }
@@ -57,8 +61,13 @@ export default function ResetPasswordPage() {
     // it means they arrived here without a valid link.
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+      
+      if (isValidRecoveryRef.current) return;
+
       if (mounted && !session && !window.location.hash.includes('access_token') && !window.location.search.includes('code')) {
         setError('Invalid or expired password reset link. Please request a new one.');
+      } else if (mounted && session && !window.location.hash.includes('access_token') && !window.location.search.includes('code')) {
+        setError('You are already logged in. To change your password securely, please log out and request a new reset link.');
       }
     };
     
@@ -91,6 +100,7 @@ export default function ResetPasswordPage() {
     try {
       setLoading(true);
       setError(null);
+      isResettingRef.current = true;
       
       // Double check session right before submitting to prevent "Auth session missing" error
       const { data: { session } } = await supabase.auth.getSession();
@@ -143,9 +153,9 @@ export default function ResetPasswordPage() {
                   setPassword(e.target.value);
                   if (error) setError(null);
                 }}
-                disabled={loading}
+                disabled={loading || !!error}
                 placeholder="••••••••"
-                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -165,15 +175,15 @@ export default function ResetPasswordPage() {
                   setConfirmPassword(e.target.value);
                   if (error) setError(null);
                 }}
-                disabled={loading}
+                disabled={loading || !!error}
                 placeholder="••••••••"
-                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
 
             <button
               type="submit"
-              disabled={loading || !password || !confirmPassword}
+              disabled={loading || !!error || !password || !confirmPassword}
               className="w-full mt-2 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm shadow-emerald-600/20"
             >
               {loading ? (

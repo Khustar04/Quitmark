@@ -56,8 +56,8 @@ export default function EditHabitModal({ habit, isOpen, onClose, onUpdate }) {
       return;
     }
 
-    if (trimmed.length > 60) {
-      setError('Habit name cannot exceed 60 characters.');
+    if (trimmed.length > 50) {
+      setError('Habit name cannot exceed 50 characters.');
       return;
     }
 
@@ -124,7 +124,7 @@ export default function EditHabitModal({ habit, isOpen, onClose, onUpdate }) {
                 Habit Name
               </label>
               <span className="text-[11px] font-mono text-zinc-400 dark:text-zinc-500">
-                {name.length}/60
+                {name.length}/50
               </span>
             </div>
             <input
@@ -137,7 +137,7 @@ export default function EditHabitModal({ habit, isOpen, onClose, onUpdate }) {
                 if (error) setError(null);
               }}
               disabled={saving}
-              maxLength={60}
+              maxLength={50}
               className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-[#232936] bg-white dark:bg-[#131722] text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-colors"
             />
           </div>

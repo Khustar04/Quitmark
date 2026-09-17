@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { getNotificationPreferences, saveNotificationPreferences } from '../utils/notifications/notificationPreferences';
 import { sendPasswordResetEmail } from '../services/authService';
-import { Bell, Shield, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Bell, Shield, Loader2, CheckCircle2, AlertCircle, Smartphone } from 'lucide-react';
+import { useInstallPrompt } from '../hooks/useInstallPrompt';
 
 function ToggleSwitch({ label, checked, onChange, description }) {
   return (
@@ -45,6 +46,8 @@ export default function SettingsPage() {
   const [resetLoading, setResetLoading] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
   const [resetError, setResetError] = useState(null);
+
+  const { isInstallable, isInstalled, handleInstallClick } = useInstallPrompt();
 
   const handleToggle = (key, value) => {
     const newPrefs = { ...prefs, [key]: value };
@@ -171,6 +174,40 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      {/* App Experience Section */}
+      {(!isInstalled && isInstallable) && (
+        <div className="bg-white dark:bg-[#0D0F17] rounded-2xl border border-zinc-200 dark:border-zinc-800/80 p-5 sm:p-8 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-white">App Experience</h2>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Install Quitmark for a better, app-like experience.</p>
+            </div>
+          </div>
+
+          <div className="py-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Add to Home Screen</h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm">
+                  Install Quitmark on your device for quick access and offline support.
+                </p>
+              </div>
+              
+              <button
+                type="button"
+                onClick={handleInstallClick}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500/40 shadow-sm shadow-emerald-600/20"
+              >
+                <span>Install Quitmark</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
