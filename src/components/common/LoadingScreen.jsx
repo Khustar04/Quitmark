@@ -4,7 +4,7 @@ export default function LoadingScreen() {
       <div className="flex flex-col items-center gap-4">
         <div className="relative flex items-center justify-center">
           <div className="w-10 h-10 rounded-full border-2 border-emerald-500/20 border-t-emerald-500 animate-spin" />
-          <span className="absolute w-2.5 h-2.5 rounded-full bg-emerald-500" />
+          <img src="/logo.png" alt="Logo" className="absolute w-5 h-5 object-contain" />
         </div>
         <p className="text-xs tracking-wider uppercase text-zinc-400 dark:text-zinc-500 font-medium">
           Loading Quitmark...

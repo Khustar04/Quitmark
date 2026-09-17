@@ -13,7 +13,7 @@ export default function Footer() {
             className="inline-flex items-center justify-center md:justify-start gap-2 font-semibold text-zinc-900 dark:text-white group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-md"
             aria-label={user ? 'Quitmark Dashboard' : 'Quitmark Home'}
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-500 group-hover:scale-110 transition-transform" />
+            <img src="/logo.png" alt="Quitmark Logo" className="w-5 h-5 object-contain group-hover:scale-105 transition-transform" />
             Quitmark
           </Link>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm">

@@ -46,7 +46,7 @@ export default function Navbar() {
           onClick={() => setMobileMenuOpen(false)}
           aria-label={user ? 'Quitmark Dashboard' : 'Quitmark Home'}
         >
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50 group-hover:scale-110 transition-transform" />
+          <img src="/logo.png" alt="Quitmark Logo" className="w-7 h-7 object-contain group-hover:scale-105 transition-transform" />
           <span>Quitmark</span>
         </Link>
 

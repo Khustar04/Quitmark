@@ -36,7 +36,7 @@ export default function AuthLayout({ children, heading, supportingText, onBackAc
           <div className="text-center mb-6">
             {hideNavigation ? (
               <div className="inline-flex items-center gap-2 font-bold text-xl tracking-tight text-zinc-900 dark:text-white mb-4">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                <img src="/logo.png" alt="Quitmark Logo" className="w-8 h-8 object-contain" />
                 <span>Quitmark</span>
               </div>
             ) : onBackAction ? (
@@ -44,7 +44,7 @@ export default function AuthLayout({ children, heading, supportingText, onBackAc
                 onClick={onBackAction}
                 className="inline-flex items-center gap-2 font-bold text-xl tracking-tight text-zinc-900 dark:text-white mb-4 focus:outline-none"
               >
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                <img src="/logo.png" alt="Quitmark Logo" className="w-8 h-8 object-contain" />
                 <span>Quitmark</span>
               </button>
             ) : (
@@ -52,7 +52,7 @@ export default function AuthLayout({ children, heading, supportingText, onBackAc
                 to="/"
                 className="inline-flex items-center gap-2 font-bold text-xl tracking-tight text-zinc-900 dark:text-white mb-4"
               >
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                <img src="/logo.png" alt="Quitmark Logo" className="w-8 h-8 object-contain" />
                 <span>Quitmark</span>
               </Link>
             )}
