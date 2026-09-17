@@ -54,13 +54,12 @@ export default function App() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         <Route path="/" element={<RootLayout />}>
-          {/* Public Landing Page */}
-          <Route index element={<LandingPage />} />
           <Route path="faq" element={<FaqPage />} />
           <Route path="report-bug" element={<ReportBugPage />} />
 
           {/* Public Auth Routes (redirect to /dashboard if already logged in) */}
           <Route element={<PublicAuthRoute />}>
+            <Route index element={<LandingPage />} />
             <Route path="login" element={<LoginPage />} />
             <Route path="signup" element={<SignupPage />} />
             <Route path="forgot-password" element={<ForgotPasswordPage />} />
