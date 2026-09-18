@@ -27,71 +27,55 @@ export default function LandingPage() {
 
     if (prefersReducedMotion) return;
 
-    // Scoped GSAP animations with proper cleanup
+    // Scoped GSAP animations with proper cleanup and clearProps to prevent frozen opacity
     const ctx = gsap.context(() => {
-      gsap.from('.hero-badge', {
-        opacity: 0,
-        y: -10,
-        duration: 0.5,
-        ease: 'power2.out',
-      });
+      gsap.fromTo(
+        '.hero-badge',
+        { opacity: 0, y: -10 },
+        { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out', clearProps: 'all' }
+      );
 
-      gsap.from('.hero-headline', {
-        opacity: 0,
-        y: 20,
-        duration: 0.6,
-        delay: 0.1,
-        ease: 'power2.out',
-      });
+      gsap.fromTo(
+        '.hero-headline',
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.6, delay: 0.1, ease: 'power2.out', clearProps: 'all' }
+      );
 
-      gsap.from('.hero-subtext', {
-        opacity: 0,
-        y: 15,
-        duration: 0.6,
-        delay: 0.2,
-        ease: 'power2.out',
-      });
+      gsap.fromTo(
+        '.hero-subtext',
+        { opacity: 0, y: 15 },
+        { opacity: 1, y: 0, duration: 0.6, delay: 0.2, ease: 'power2.out', clearProps: 'all' }
+      );
 
-      gsap.from('.hero-ctas', {
-        opacity: 0,
-        y: 15,
-        duration: 0.5,
-        delay: 0.3,
-        ease: 'power2.out',
-      });
+      gsap.fromTo(
+        '.hero-ctas',
+        { opacity: 0, y: 15 },
+        { opacity: 1, y: 0, duration: 0.5, delay: 0.3, ease: 'power2.out', clearProps: 'all' }
+      );
 
-      gsap.from('.product-preview-card', {
-        opacity: 0,
-        y: 25,
-        duration: 0.7,
-        delay: 0.4,
-        ease: 'power2.out',
-      });
+      gsap.fromTo(
+        '.product-preview-card',
+        { opacity: 0, y: 25 },
+        { opacity: 1, y: 0, duration: 0.7, delay: 0.4, ease: 'power2.out', clearProps: 'all' }
+      );
 
-      gsap.from('.how-it-works-card', {
-        opacity: 0,
-        y: 20,
-        duration: 0.5,
-        stagger: 0.12,
-        delay: 0.55,
-        ease: 'power2.out',
-      });
+      gsap.fromTo(
+        '.how-it-works-card',
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.5, stagger: 0.1, delay: 0.5, ease: 'power2.out', clearProps: 'all' }
+      );
 
-      gsap.from('.streak-card', {
-        opacity: 0,
-        y: 20,
-        duration: 0.6,
-        delay: 0.7,
-        ease: 'power2.out',
-      });
+      gsap.fromTo(
+        '.streak-card',
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.6, delay: 0.65, ease: 'power2.out', clearProps: 'all' }
+      );
 
-      gsap.from('.final-cta-card', {
-        opacity: 0,
-        y: 20,
-        duration: 0.6,
-        delay: 0.85,
-        ease: 'power2.out',
-      });
+      gsap.fromTo(
+        '.final-cta-card',
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.6, delay: 0.8, ease: 'power2.out', clearProps: 'all' }
+      );
     }, containerRef);
 
     return () => ctx.revert();
