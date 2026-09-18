@@ -86,23 +86,25 @@ export default function LandingPage() {
       {/* Fixed Ambient Abstract Glow Background */}
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-0 -z-10 bg-cover bg-top bg-no-repeat opacity-30 dark:opacity-80 transition-opacity"
+        className="pointer-events-none fixed inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-35 dark:opacity-80 transition-opacity"
         style={{
           backgroundImage: "url('/landing-bg.png')",
-          backgroundPosition: "center top",
         }}
       />
       {/* Gradient Vignette to keep text ultra-crisp */}
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-0 -z-10 bg-gradient-to-b from-slate-50/60 via-transparent to-slate-50/80 dark:from-zinc-950/40 dark:via-transparent dark:to-zinc-950/80"
+        className="pointer-events-none fixed inset-0 z-0 bg-gradient-to-b from-slate-50/60 via-transparent to-slate-50/80 dark:from-zinc-950/40 dark:via-transparent dark:to-zinc-950/80"
       />
 
-      <Hero />
-      <ProductPreview />
-      <HowItWorks />
-      <StreakSection />
-      <FinalCTA />
+      {/* Landing Content Above Background */}
+      <div className="relative z-10">
+        <Hero />
+        <ProductPreview />
+        <HowItWorks />
+        <StreakSection />
+        <FinalCTA />
+      </div>
     </div>
   );
 }
