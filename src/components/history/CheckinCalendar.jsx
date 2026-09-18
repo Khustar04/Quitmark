@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Activity, Info, Check, X } from 'lucide-react';
-import { getLocalDateString, formatFullDisplayDate } from '../../utils/streaks/dateUtils';
+import { formatFullDisplayDate } from '../../utils/streaks/dateUtils';
+import { useLocalDate } from '../../hooks/useLocalDate';
 import { buildHeatmapGrid } from '../../utils/progress/buildHabitHeatmap';
 import CheckinLegend from './CheckinLegend';
 
 export default function CheckinCalendar({ checkins = [] }) {
-  const todayStr = getLocalDateString();
+  const todayStr = useLocalDate();
   const [selectedDay, setSelectedDay] = useState(null);
 
   // Pre-index checkins by date for O(1) lookups

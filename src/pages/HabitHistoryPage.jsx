@@ -14,6 +14,7 @@ import {
 } from '../store/slices/habitsSlice';
 import { useCheckin } from '../hooks/useCheckin';
 import HabitHistory from '../components/history/HabitHistory';
+import { isActiveUser } from '../utils/auth/sessionGuard';
 
 export default function HabitHistoryPage() {
   const { habitId } = useParams();
@@ -22,6 +23,7 @@ export default function HabitHistoryPage() {
   const { items: habits, checkinsByHabit, checkinLoading } = useSelector(
     (state) => state.habits
   );
+  const userId = useSelector((state) => state.auth.user?.id);
 
   const { handleCheckin } = useCheckin();
 
@@ -40,13 +42,14 @@ export default function HabitHistoryPage() {
     let isMounted = true;
 
     const loadData = async () => {
+      if (!userId || !isActiveUser(userId)) return;
       try {
         const [hData, cData] = await Promise.all([
           getHabitById(habitId),
           getHabitCheckins(habitId),
         ]);
 
-        if (!isMounted) return;
+        if (!isMounted || !isActiveUser(userId)) return;
 
         if (!hData) {
           setNotFound(true);
@@ -55,11 +58,11 @@ export default function HabitHistoryPage() {
           dispatch(setSingleHabitCheckins({ habitId, checkins: cData }));
         }
       } catch (err) {
-        if (isMounted) {
+        if (isMounted && isActiveUser(userId)) {
           setPageError(err.message || 'Failed to load habit history.');
         }
       } finally {
-        if (isMounted) {
+        if (isMounted && isActiveUser(userId)) {
           setLoading(false);
         }
       }
@@ -70,7 +73,7 @@ export default function HabitHistoryPage() {
     return () => {
       isMounted = false;
     };
-  }, [habitId, dispatch]);
+  }, [habitId, dispatch, userId]);
 
   // Subtle GSAP entrance animation
   useEffect(() => {

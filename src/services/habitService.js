@@ -1,4 +1,5 @@
 import supabase from '../lib/supabase';
+import { syncUserTimezone } from './authService';
 import { getLocalDateString } from '../utils/streaks/dateUtils';
 
 /**
@@ -23,7 +24,8 @@ const getFriendlyDbErrorMessage = (error) => {
   if (msg.includes('future') || msg.includes('jwt') || error?.code === 'PGRST303') {
     return 'Your session was synchronizing. Please refresh.';
   }
-  return error.message || 'Operation failed. Please try again.';
+  console.error('[Quitmark] Database request failed:', error);
+  return 'We could not complete that request. Please try again.';
 };
 
 /**
@@ -189,6 +191,7 @@ export const getAllUserCheckins = async () => {
  * Strictly prevents future date insertion by locking date to today's local calendar day.
  */
 export const upsertTodayCheckin = async (habitId, status) => {
+  await syncUserTimezone();
   const user = await getAuthenticatedUser();
   const today = getLocalDateString();
 
@@ -211,6 +214,26 @@ export const upsertTodayCheckin = async (habitId, status) => {
       .select()
       .single()
   );
+};
+
+/**
+ * Removes today's explicit status so the habit returns to the pending state.
+ */
+export const deleteTodayCheckin = async (habitId) => {
+  await syncUserTimezone();
+  const user = await getAuthenticatedUser();
+  const today = getLocalDateString();
+
+  await withClockSkewRetry(() =>
+    supabase
+      .from('habit_checkins')
+      .delete()
+      .eq('habit_id', habitId)
+      .eq('user_id', user.id)
+      .eq('check_in_date', today)
+  );
+
+  return true;
 };
 
 /**

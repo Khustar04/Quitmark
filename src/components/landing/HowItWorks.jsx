@@ -89,7 +89,7 @@ export default function HowItWorks() {
         <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-white leading-tight">
           How Quitmark Works
         </h2>
-        <p className="mt-4 text-base sm:text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed">
+        <p className="mt-4 text-base sm:text-lg text-zinc-700 dark:text-zinc-400 leading-relaxed">
           No complicated setups, no overwhelming charts. Just a clean four-step system designed to rewire your habits one day at a time.
         </p>
       </div>
@@ -101,7 +101,7 @@ export default function HowItWorks() {
           return (
             <div
               key={step.number}
-              className="how-it-works-card group rounded-2xl border border-zinc-200/90 dark:border-zinc-800/90 bg-white dark:bg-zinc-900/70 p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/5 backdrop-blur-sm"
+              className="how-it-works-card group rounded-2xl border border-zinc-200 dark:border-zinc-800/90 bg-white dark:bg-zinc-900 shadow-sm dark:shadow-none p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/5 transform-gpu"
             >
               {/* Top Row: Badge & Icon */}
               <div>
@@ -145,11 +145,11 @@ export default function HowItWorks() {
                           {step.preview.name}
                         </span>
                       </div>
-                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 block">
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 block">
                         {step.preview.category}
                       </span>
                     </div>
-                    <span className="text-[10px] font-medium px-2 py-1 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    <span className="text-xs font-medium px-2 py-1 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                       {step.preview.tag}
                     </span>
                   </div>
@@ -165,12 +165,12 @@ export default function HowItWorks() {
                         <span className="text-xs font-semibold text-zinc-900 dark:text-white block">
                           {step.preview.label}
                         </span>
-                        <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400">
                           {step.preview.sub}
                         </span>
                       </div>
                     </div>
-                    <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <span className="text-xs font-medium px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                       Clean
                     </span>
                   </div>
@@ -183,7 +183,7 @@ export default function HowItWorks() {
                         <Flame className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500/30" />
                         <span>{step.preview.streak}</span>
                       </div>
-                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium">
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
                         {step.preview.best}
                       </span>
                     </div>
@@ -213,7 +213,7 @@ export default function HowItWorks() {
                         <span className="text-xs font-semibold text-zinc-900 dark:text-white block">
                           {step.preview.rank}
                         </span>
-                        <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                        <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                           {step.preview.badge}
                         </span>
                       </div>
@@ -229,39 +229,39 @@ export default function HowItWorks() {
 
       {/* Trust & Architecture Badges */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12">
-        <div className="p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/40 flex items-center gap-3">
+        <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 shadow-sm dark:shadow-none flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
             <Smartphone className="w-4 h-4" />
           </div>
           <div>
             <h4 className="text-xs font-semibold text-zinc-900 dark:text-white">Installable PWA</h4>
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Add to home screen on iOS & Android in 1 tap</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">Add to home screen on iOS & Android in 1 tap</p>
           </div>
         </div>
 
-        <div className="p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/40 flex items-center gap-3">
+        <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 shadow-sm dark:shadow-none flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
             <Lock className="w-4 h-4" />
           </div>
           <div>
             <h4 className="text-xs font-semibold text-zinc-900 dark:text-white">100% Private Data</h4>
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Row-level security ensures only you see your habits</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">Row-level security ensures only you see your habits</p>
           </div>
         </div>
 
-        <div className="p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/40 flex items-center gap-3">
+        <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 shadow-sm dark:shadow-none flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
             <BellRing className="w-4 h-4" />
           </div>
           <div>
             <h4 className="text-xs font-semibold text-zinc-900 dark:text-white">Smart Urge Alerts</h4>
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Timely reminder notifications when urges peak</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">Timely reminder notifications when urges peak</p>
           </div>
         </div>
       </div>
 
       {/* Bottom CTA Card */}
-      <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left">
+      <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10 text-center sm:text-left">
         <div>
           <h3 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white">
             Ready to break your first unwanted habit?

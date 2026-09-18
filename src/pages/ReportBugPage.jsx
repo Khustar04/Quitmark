@@ -7,6 +7,7 @@ const BUG_CATEGORIES = [
   { id: 'auth', label: 'Authentication Problem', description: 'Login, signup, or Google OAuth issues.' },
   { id: 'data', label: 'Data / History Problem', description: 'Missing history, incorrect streaks, or heatmap errors.' },
 ];
+const MAX_BUG_DETAILS_LENGTH = 4000;
 
 export default function ReportBugPage() {
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -55,10 +56,10 @@ export default function ReportBugPage() {
               <CheckCircle2 className="w-8 h-8" />
             </div>
             <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-2">
-              Report Sent to Mail Client
+              Email Draft Prepared
             </h3>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">
-              Your default email client has been opened. Thank you for helping us improve Quitmark!
+              We prepared an email draft in your default mail client. Send it when you are ready—thank you for helping us improve Quitmark!
             </p>
           </div>
         ) : (
@@ -104,9 +105,13 @@ export default function ReportBugPage() {
                 rows={4}
                 value={details}
                 onChange={(e) => setDetails(e.target.value)}
+                maxLength={MAX_BUG_DETAILS_LENGTH}
                 placeholder="Briefly describe what happened..."
                 className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800/80 bg-zinc-50 dark:bg-[#131722] text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all resize-none"
               />
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 text-right">
+                {details.length}/{MAX_BUG_DETAILS_LENGTH}
+              </p>
             </div>
 
             {/* Submit */}

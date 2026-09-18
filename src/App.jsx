@@ -1,8 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { getSession, onAuthStateChange } from './services/authService';
 import { setAuth, clearAuth } from './store/slices/authSlice';
+import { resetHabitsState } from './store/slices/habitsSlice';
+import { syncUserTimezone } from './services/authService';
+import { setActiveUserId } from './utils/auth/sessionGuard';
 
 import RootLayout from './layouts/RootLayout';
 import LandingPage from './pages/LandingPage';
@@ -22,23 +25,42 @@ import LeaderboardPage from './pages/LeaderboardPage';
 
 export default function App() {
   const dispatch = useDispatch();
+  const activeUserIdRef = useRef(null);
 
   useEffect(() => {
+    const clearUserState = () => {
+      activeUserIdRef.current = null;
+      setActiveUserId(null);
+      dispatch(clearAuth());
+      dispatch(resetHabitsState());
+    };
+
+    const applySession = (session, user) => {
+      if (!session || !user) {
+        clearUserState();
+        return;
+      }
+
+      if (activeUserIdRef.current && activeUserIdRef.current !== user.id) {
+        dispatch(resetHabitsState());
+      }
+      activeUserIdRef.current = user.id;
+      setActiveUserId(user.id);
+      dispatch(setAuth({ user, session }));
+      void syncUserTimezone();
+    };
+
     // 1. Initial session verification
     getSession().then(({ session, user }) => {
-      if (session && user) {
-        dispatch(setAuth({ user, session }));
-      } else {
-        dispatch(clearAuth());
-      }
+      applySession(session, user);
     });
 
     // 2. Subscribe to auth events (LOGIN, LOGOUT, TOKEN_REFRESH, OAUTH_REDIRECT)
     const { data: { subscription } } = onAuthStateChange((event, session) => {
       if (session?.user) {
-        dispatch(setAuth({ user: session.user, session }));
-      } else if (event === 'SIGNED_OUT') {
-        dispatch(clearAuth());
+        applySession(session, session.user);
+      } else if (event === 'SIGNED_OUT' || !session) {
+        clearUserState();
       }
     });
 
@@ -47,7 +69,9 @@ export default function App() {
       if (document.visibilityState === 'visible') {
         const { session, user } = await getSession();
         if (session && user) {
-          dispatch(setAuth({ user, session }));
+          applySession(session, user);
+        } else {
+          clearUserState();
         }
       }
     };

@@ -24,7 +24,7 @@ const faqs = [
   },
   {
     question: 'How does the GitHub-style history work?',
-    answer: 'The habit history page visualizes your check-ins over the past 84 days (approx. 12 weeks). It uses a continuous grid where columns represent weeks and rows represent days of the week. Completed days appear emerald, missed days appear crimson, and future/empty days remain neutral.'
+    answer: 'The habit history page visualizes your check-ins over the past 91 days (13 weeks). It uses a continuous grid where columns represent weeks and rows represent days of the week. Completed days appear emerald, missed days appear crimson, and future/empty days remain neutral.'
   }
 ];
 

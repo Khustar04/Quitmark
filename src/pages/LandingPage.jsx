@@ -83,39 +83,39 @@ export default function LandingPage() {
 
   return (
     <div ref={containerRef} className="relative w-full">
-      {/* Fixed Ambient Abstract Glow Background with Subtle Breathing Pulse */}
+      {/* Light-mode wash: keep the page bright instead of tinting with the dark art */}
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-40 dark:opacity-85 transition-opacity animate-light-pulse"
+        className="pointer-events-none fixed inset-0 z-0 dark:hidden bg-[radial-gradient(ellipse_at_top_left,rgba(16,185,129,0.14),transparent_42%),radial-gradient(ellipse_at_top_right,rgba(45,212,191,0.10),transparent_38%),radial-gradient(ellipse_at_bottom,rgba(16,185,129,0.08),transparent_46%)]"
+      />
+
+      {/* Dark-mode atmospheric photo */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 z-0 hidden dark:block bg-cover bg-center bg-no-repeat opacity-85 animate-light-pulse transform-gpu will-change-[transform,opacity]"
         style={{
           backgroundImage: "url('/landing-bg.png')",
         }}
       />
 
-      {/* Dynamic Floating Ambient Light Orbs & Subtle Stardust Sparks */}
+      {/* Floating ambient orbs — softer in light mode */}
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+        className="pointer-events-none fixed inset-0 z-0 overflow-hidden transform-gpu opacity-50 dark:opacity-100"
       >
-        {/* Top-left emerald floating aurora orb */}
-        <div className="absolute -top-28 -left-28 w-[420px] h-[420px] rounded-full bg-emerald-500/20 blur-[120px] animate-aurora-1" />
+        <div className="absolute -top-28 -left-28 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(16,185,129,0.22)_0%,transparent_70%)] dark:bg-[radial-gradient(circle,rgba(16,185,129,0.15)_0%,transparent_70%)] animate-aurora-1 will-change-transform transform-gpu" />
+        <div className="absolute top-1/3 -right-24 w-[600px] h-[600px] bg-[radial-gradient(circle,rgba(52,211,153,0.16)_0%,transparent_70%)] dark:bg-[radial-gradient(circle,rgba(52,211,153,0.12)_0%,transparent_70%)] animate-aurora-2 will-change-transform transform-gpu" />
+        <div className="absolute -bottom-24 left-1/4 w-[650px] h-[550px] bg-[radial-gradient(circle,rgba(5,150,105,0.12)_0%,transparent_70%)] animate-aurora-1 will-change-transform transform-gpu" />
 
-        {/* Center-right bright teal floating bloom */}
-        <div className="absolute top-1/3 -right-24 w-[500px] h-[500px] rounded-full bg-emerald-400/15 blur-[140px] animate-aurora-2" />
-
-        {/* Bottom soft ambient green aura */}
-        <div className="absolute -bottom-24 left-1/4 w-[550px] h-[450px] rounded-full bg-emerald-600/15 blur-[150px] animate-aurora-1" />
-
-        {/* Subtle shimmering light sparks along the light arcs */}
-        <span className="absolute top-[22%] left-[18%] w-1.5 h-1.5 rounded-full bg-emerald-300 shadow-[0_0_10px_#34d399] animate-particle-1" />
-        <span className="absolute top-[48%] right-[22%] w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_14px_#34d399] animate-particle-2" />
-        <span className="absolute top-[72%] left-[32%] w-1.5 h-1.5 rounded-full bg-teal-300 shadow-[0_0_10px_#2dd4bf] animate-particle-3" />
+        <span className="hidden dark:block absolute top-[22%] left-[18%] w-1.5 h-1.5 rounded-full bg-emerald-300 shadow-[0_0_10px_#34d399] animate-particle-1 will-change-transform transform-gpu" />
+        <span className="hidden dark:block absolute top-[48%] right-[22%] w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_14px_#34d399] animate-particle-2 will-change-transform transform-gpu" />
+        <span className="hidden dark:block absolute top-[72%] left-[32%] w-1.5 h-1.5 rounded-full bg-teal-300 shadow-[0_0_10px_#2dd4bf] animate-particle-3 will-change-transform transform-gpu" />
       </div>
 
-      {/* Gradient Vignette to keep text ultra-crisp */}
+      {/* Vignette: opaque enough in light mode that copy stays crisp */}
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-0 z-0 bg-gradient-to-b from-slate-50/60 via-transparent to-slate-50/80 dark:from-zinc-950/30 dark:via-transparent dark:to-zinc-950/70"
+        className="pointer-events-none fixed inset-0 z-0 bg-gradient-to-b from-slate-50/90 via-slate-50/55 to-slate-50 dark:from-zinc-950/30 dark:via-transparent dark:to-zinc-950/70 transform-gpu"
       />
 
       {/* Landing Content Above Background */}

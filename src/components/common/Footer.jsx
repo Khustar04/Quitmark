@@ -5,7 +5,7 @@ export default function Footer() {
   const user = useSelector((state) => state.auth.user);
 
   return (
-    <footer className="relative z-10 border-t border-zinc-200/80 dark:border-white/10 bg-white/70 dark:bg-zinc-950/60 backdrop-blur-md py-12 transition-colors">
+    <footer className="relative z-10 border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900/85 py-12 transition-colors transform-gpu">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="text-center md:text-left space-y-2">
           <Link

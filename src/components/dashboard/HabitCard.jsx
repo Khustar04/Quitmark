@@ -188,6 +188,18 @@ export default function HabitCard({
                 )}
                 <span>Missed</span>
               </button>
+
+              {showStatusChange && todayStatus !== 'pending' && (
+                <button
+                  type="button"
+                  onClick={() => handleMark('pending')}
+                  disabled={isCheckingIn}
+                  className="flex-1 min-h-[44px] inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-zinc-200 dark:border-[#232936] bg-zinc-50 dark:bg-zinc-900/50 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-sm font-medium transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                >
+                  {isCheckingIn ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <RotateCcw className="w-4 h-4 shrink-0" />}
+                  <span>Pending</span>
+                </button>
+              )}
             </div>
           </div>
         ) : (
@@ -248,4 +260,3 @@ export default function HabitCard({
     </div>
   );
 }
-

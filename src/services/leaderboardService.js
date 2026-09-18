@@ -6,10 +6,13 @@ import { supabase } from '../lib/supabase';
  * @returns {Promise<Array<{ user_id: string, display_name: string, current_streak: number }>>}
  */
 export async function getLeaderboard(limitCount = 50) {
+  const requestedLimit = Number.isInteger(limitCount)
+    ? Math.min(Math.max(limitCount, 1), 100)
+    : 50;
   let retries = 2;
   while (retries >= 0) {
     const { data, error } = await supabase.rpc('get_leaderboard', {
-      limit_count: limitCount
+      limit_count: requestedLimit
     });
 
     if (error) {

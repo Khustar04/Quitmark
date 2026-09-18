@@ -64,6 +64,14 @@ export const habitsSlice = createSlice({
         state.checkinsByHabit[habitId].unshift(checkin);
       }
     },
+    removeHabitCheckinOptimistic: (state, action) => {
+      const { habitId, checkInDate } = action.payload;
+      if (state.checkinsByHabit[habitId]) {
+        state.checkinsByHabit[habitId] = state.checkinsByHabit[habitId].filter(
+          (checkin) => checkin.check_in_date !== checkInDate
+        );
+      }
+    },
     setSingleHabit: (state, action) => {
       const habit = action.payload;
       const exists = state.items.find(h => h.id === habit.id);
@@ -98,6 +106,7 @@ export const habitsSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    resetHabitsState: () => initialState,
   },
 });
 
@@ -108,6 +117,7 @@ export const {
   removeHabitFromState,
   setCheckins,
   setHabitCheckinOptimistic,
+  removeHabitCheckinOptimistic,
   setSingleHabit,
   setSingleHabitCheckins,
   revertHabitCheckin,
@@ -115,6 +125,7 @@ export const {
   setCheckinLoading,
   setError,
   clearError,
+  resetHabitsState,
 } = habitsSlice.actions;
 
 export default habitsSlice.reducer;

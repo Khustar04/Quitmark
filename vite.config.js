@@ -47,5 +47,5 @@ export default defineConfig({
       }
     })
   ],
-  envPrefix: ['VITE_', 'SUPABASE_'],
+  envPrefix: 'SUPABASE_',
 })

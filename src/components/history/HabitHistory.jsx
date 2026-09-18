@@ -1,4 +1,4 @@
-import { Target, Check, X, Loader2 } from 'lucide-react';
+import { Target, Check, X, Loader2, RotateCcw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import HabitHistoryHeader from './HabitHistoryHeader';
 import HabitStats from './HabitStats';
@@ -6,7 +6,7 @@ import CheckinCalendar from './CheckinCalendar';
 import RecentActivity from './RecentActivity';
 import { calculateCurrentStreak } from '../../utils/streaks/calculateCurrentStreak';
 import { calculateLongestStreak } from '../../utils/streaks/calculateLongestStreak';
-import { getLocalDateString } from '../../utils/streaks/dateUtils';
+import { useLocalDate } from '../../hooks/useLocalDate';
 
 export default function HabitHistory({
   habit,
@@ -14,7 +14,7 @@ export default function HabitHistory({
   onCheckin,
   isCheckingIn = false,
 }) {
-  const todayStr = getLocalDateString();
+  const todayStr = useLocalDate();
 
   // Metrics calculation
   const currentStreak = calculateCurrentStreak(checkins, todayStr);
@@ -95,6 +95,18 @@ export default function HabitHistory({
             )}
             <span>Missed</span>
           </button>
+
+          {todayStatus !== 'pending' && (
+            <button
+              type="button"
+              disabled={isCheckingIn}
+              onClick={() => onCheckin && onCheckin(habit.id, 'pending')}
+              className="min-h-[40px] px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all inline-flex items-center gap-1.5 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 border border-zinc-200 dark:border-[#232936] bg-zinc-50 dark:bg-[#131722] text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 disabled:opacity-50"
+            >
+              {isCheckingIn ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+              <span>Pending</span>
+            </button>
+          )}
         </div>
       </div>
 

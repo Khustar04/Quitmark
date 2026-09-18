@@ -23,7 +23,7 @@ export function useNotificationScheduler() {
   useEffect(() => {
     const checkSchedule = () => {
       const prefs = getNotificationPreferences();
-      if (!prefs.enabled) return;
+      if (!prefs.enabled || !prefs.streakReminders) return;
 
       const now = new Date();
       const hour = now.getHours();

@@ -26,6 +26,7 @@ import { useLocalDate } from '../hooks/useLocalDate';
 import { getLastNWeeksDays } from '../utils/streaks/dateUtils';
 import { useCheckin } from '../hooks/useCheckin';
 import { checkAndNotifyStreakRisks } from '../utils/notifications/streakNotifier';
+import { isActiveUser } from '../utils/auth/sessionGuard';
 
 import HabitCard from '../components/dashboard/HabitCard';
 import CreateHabitModal from '../components/dashboard/CreateHabitModal';
@@ -38,6 +39,7 @@ export default function DashboardPage() {
   const { items: habits, checkinsByHabit, loading, checkinLoading, error } = useSelector(
     (state) => state.habits
   );
+  const userId = useSelector((state) => state.auth.user?.id);
   const dashboardSummary = useSelector(selectDashboardSummary);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -48,6 +50,7 @@ export default function DashboardPage() {
 
   const containerRef = useRef(null);
   const headerRef = useRef(null);
+  const requestIdRef = useRef(0);
 
   // Subtle formatted date string (e.g. Saturday, September 12, 2026)
   const formattedTodayDate = new Date().toLocaleDateString('en-US', {
@@ -82,24 +85,35 @@ export default function DashboardPage() {
 
   // Fetch habits and check-ins
   const loadHabitData = useCallback(async () => {
+    if (!userId) return;
+    if (!isActiveUser(userId)) return;
+    const requestId = ++requestIdRef.current;
     try {
+      if (!isActiveUser(userId)) return;
       dispatch(setLoading(true));
       dispatch(clearError());
       const [habitsData, checkinsData] = await Promise.all([
         getHabits(),
         getAllUserCheckins(),
       ]);
+      if (requestId !== requestIdRef.current || !isActiveUser(userId)) return;
       dispatch(setHabits(habitsData));
       dispatch(setCheckins(checkinsData));
     } catch (err) {
+      if (requestId !== requestIdRef.current || !isActiveUser(userId)) return;
       dispatch(setError(err.message || 'Failed to load habit data.'));
     } finally {
-      dispatch(setLoading(false));
+      if (requestId === requestIdRef.current && isActiveUser(userId)) {
+        dispatch(setLoading(false));
+      }
     }
-  }, [dispatch]);
+  }, [dispatch, userId]);
 
   useEffect(() => {
     loadHabitData();
+    return () => {
+      requestIdRef.current += 1;
+    };
   }, [loadHabitData]);
 
   const hasCheckedNotifications = useRef(false);
@@ -219,7 +233,7 @@ export default function DashboardPage() {
       )}
 
       {/* Loading Skeleton */}
-      {loading && habits.length === 0 ? (
+      {loading ? (
         <div className="flex flex-col gap-4">
           {[1, 2, 3].map((n) => (
             <div

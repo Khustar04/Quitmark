@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, ChevronDown } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 export default function Hero() {
   const handleScrollToHowItWorks = (e) => {
@@ -26,7 +26,7 @@ export default function Hero() {
       </h1>
 
       {/* Supporting copy */}
-      <p className="hero-subtext text-base sm:text-lg md:text-xl text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto mb-8 sm:mb-10 font-normal leading-relaxed">
+      <p className="hero-subtext text-base sm:text-lg md:text-xl text-zinc-700 dark:text-zinc-400 max-w-2xl mx-auto mb-8 sm:mb-10 font-normal leading-relaxed">
         Track the habits you want to quit, stay accountable, and build your streak one day at a time.
       </p>
 
@@ -43,10 +43,9 @@ export default function Hero() {
         <a
           href="#how-it-works"
           onClick={handleScrollToHowItWorks}
-          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/60 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-300 dark:hover:border-zinc-700 font-medium text-sm sm:text-base transition-colors"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-zinc-800 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-900/80 hover:border-zinc-400 dark:hover:border-zinc-700 font-medium text-sm sm:text-base shadow-sm dark:shadow-none transition-colors"
         >
           <span>How It Works</span>
-          <ChevronDown className="w-4 h-4" />
         </a>
       </div>
     </section>

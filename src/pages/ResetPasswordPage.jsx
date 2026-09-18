@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { AlertCircle } from 'lucide-react';
-import { updatePassword } from '../services/authService';
+import { getFriendlyAuthErrorMessage, updatePassword } from '../services/authService';
 import supabase from '../lib/supabase';
 import AuthLayout from '../components/auth/AuthLayout';
 
@@ -11,6 +11,11 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [recoveryReady, setRecoveryReady] = useState(false);
+  const configurationError = !supabase
+    ? 'Password reset is unavailable because this app is not configured. Please contact support.'
+    : null;
+  const visibleError = configurationError || error;
   const navigate = useNavigate();
   const containerRef = useRef(null);
   const isResettingRef = useRef(false);
@@ -41,6 +46,8 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     let mounted = true;
 
+    if (!supabase) return undefined;
+
     // Supabase will automatically process the hash/code in the URL.
     // We listen to the auth state change to catch the PASSWORD_RECOVERY event or the session establishment.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
@@ -48,6 +55,7 @@ export default function ResetPasswordPage() {
       
       if (event === 'PASSWORD_RECOVERY') {
         isValidRecoveryRef.current = true;
+        setRecoveryReady(true);
         setError(null);
       } else if (event === 'SIGNED_IN' && !isValidRecoveryRef.current) {
         setError('You are already logged in. To change your password securely, please log out and request a new reset link.');
@@ -57,16 +65,15 @@ export default function ResetPasswordPage() {
       }
     });
 
-    // Fallback check: if after 2 seconds there's still no session and no hash/code in URL, 
-    // it means they arrived here without a valid link.
+    // Fallback check after Supabase has processed the recovery URL.
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (isValidRecoveryRef.current) return;
 
-      if (mounted && !session && !window.location.hash.includes('access_token') && !window.location.search.includes('code')) {
+      if (mounted && !session) {
         setError('Invalid or expired password reset link. Please request a new one.');
-      } else if (mounted && session && !window.location.hash.includes('access_token') && !window.location.search.includes('code')) {
+      } else if (mounted && session) {
         setError('You are already logged in. To change your password securely, please log out and request a new reset link.');
       }
     };
@@ -95,7 +102,7 @@ export default function ResetPasswordPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (!recoveryReady || !supabase || !validate()) return;
 
     try {
       setLoading(true);
@@ -103,7 +110,8 @@ export default function ResetPasswordPage() {
       isResettingRef.current = true;
       
       // Double check session right before submitting to prevent "Auth session missing" error
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
       if (!session) {
         throw new Error('No active recovery session found. Please request a new reset link. Ensure you open the link in the exact same browser/device.');
       }
@@ -112,7 +120,7 @@ export default function ResetPasswordPage() {
       await supabase.auth.signOut(); // Ensure temporary recovery session is destroyed
       navigate('/login', { state: { message: 'Password reset successfully. Please log in with your new password.' } });
     } catch (err) {
-      setError(err.message || 'Failed to reset password. Please try again.');
+      setError(getFriendlyAuthErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -126,13 +134,20 @@ export default function ResetPasswordPage() {
         hideNavigation={true}
       >
         <div className="w-full space-y-6">
-          {error && (
+          {visibleError && (
             <div
               role="alert"
               className="flex items-start gap-2.5 p-3 rounded-lg border border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400 text-xs sm:text-sm animate-in fade-in duration-200"
             >
               <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-              <span>{error}</span>
+              <div className="space-y-2">
+                <span>{visibleError}</span>
+                {visibleError && (
+                  <Link to="/forgot-password" className="block font-semibold underline hover:no-underline">
+                    Request a new reset link
+                  </Link>
+                )}
+              </div>
             </div>
           )}
 
@@ -153,7 +168,7 @@ export default function ResetPasswordPage() {
                   setPassword(e.target.value);
                   if (error) setError(null);
                 }}
-                disabled={loading || !!error}
+                disabled={loading || !recoveryReady}
                 placeholder="••••••••"
                 className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               />
@@ -175,7 +190,7 @@ export default function ResetPasswordPage() {
                   setConfirmPassword(e.target.value);
                   if (error) setError(null);
                 }}
-                disabled={loading || !!error}
+                disabled={loading || !recoveryReady}
                 placeholder="••••••••"
                 className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               />
@@ -183,7 +198,7 @@ export default function ResetPasswordPage() {
 
             <button
               type="submit"
-              disabled={loading || !!error || !password || !confirmPassword}
+              disabled={loading || !recoveryReady || !password || !confirmPassword}
               className="w-full mt-2 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm shadow-emerald-600/20"
             >
               {loading ? (

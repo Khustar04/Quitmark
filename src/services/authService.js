@@ -36,7 +36,8 @@ export const getFriendlyAuthErrorMessage = (error) => {
     return 'Network connection error. Please check your internet connection.';
   }
 
-  return error.message || 'Something went wrong. Please try again.';
+  console.error('[Quitmark] Authentication request failed:', error);
+  return 'Something went wrong. Please try again.';
 };
 
 /**
@@ -182,6 +183,24 @@ export const onAuthStateChange = (callback) => {
     return { data: { subscription: { unsubscribe: () => {} } } };
   }
   return supabase.auth.onAuthStateChange(callback);
+};
+
+/**
+ * Stores the browser's IANA time zone for server-side date calculations.
+ */
+export const syncUserTimezone = async () => {
+  if (!supabase || typeof Intl === 'undefined') return;
+
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (!timeZone) return;
+
+  const { error } = await supabase.rpc('set_my_time_zone', {
+    requested_time_zone: timeZone,
+  });
+
+  if (error) {
+    console.warn('[Quitmark] Unable to synchronize user time zone:', error);
+  }
 };
 
 /**
