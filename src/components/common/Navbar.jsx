@@ -37,7 +37,7 @@ export default function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-zinc-200 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md transition-colors">
+    <header className="sticky top-0 z-50 w-full border-b border-zinc-200/80 dark:border-white/10 bg-white/70 dark:bg-zinc-950/40 backdrop-blur-xl transition-all shadow-sm dark:shadow-[0_4px_30px_rgba(0,0,0,0.2)]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Brand Logo - Links to /dashboard when authenticated, / when unauthenticated */}
         <Link

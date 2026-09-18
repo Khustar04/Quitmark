@@ -10,3 +10,75 @@
     @apply font-sans bg-slate-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 min-h-screen antialiased transition-colors duration-200;
   }
 }
+
+@keyframes auroraFloat {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translate(25px, -20px) scale(1.12);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+    opacity: 0.65;
+  }
+}
+
+@keyframes lightBeamPulse {
+  0%, 100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.03);
+  }
+}
+
+@keyframes particleShimmer {
+  0%, 100% {
+    opacity: 0.25;
+    transform: translateY(0px) scale(0.85);
+  }
+  50% {
+    opacity: 0.95;
+    transform: translateY(-10px) scale(1.25);
+  }
+}
+
+.animate-aurora-1 {
+  animation: auroraFloat 9s ease-in-out infinite alternate;
+}
+
+.animate-aurora-2 {
+  animation: auroraFloat 13s ease-in-out infinite alternate-reverse;
+}
+
+.animate-light-pulse {
+  animation: lightBeamPulse 8s ease-in-out infinite alternate;
+}
+
+.animate-particle-1 {
+  animation: particleShimmer 4s ease-in-out infinite;
+}
+
+.animate-particle-2 {
+  animation: particleShimmer 6s ease-in-out infinite 2s;
+}
+
+.animate-particle-3 {
+  animation: particleShimmer 5s ease-in-out infinite 1s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-aurora-1,
+  .animate-aurora-2,
+  .animate-light-pulse,
+  .animate-particle-1,
+  .animate-particle-2,
+  .animate-particle-3 {
+    animation: none !important;
+  }
+}
