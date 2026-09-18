@@ -153,12 +153,25 @@ export const signOut = async () => {
  */
 export const getSession = async () => {
   if (!supabase) return { session: null, user: null };
-  const { data, error } = await supabase.auth.getSession();
-  if (error) {
-    console.warn('[Quitmark] Error fetching initial session:', error);
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
+      console.warn('[Quitmark] Error fetching initial session:', error);
+      const msg = (error.message || '').toLowerCase();
+      if (msg.includes('future') || msg.includes('jwt') || error.code === 'PGRST303') {
+        await new Promise((res) => setTimeout(res, 500));
+        const { data: refreshed, error: refErr } = await supabase.auth.refreshSession().catch(() => ({ data: {}, error: null }));
+        if (!refErr && refreshed?.session) {
+          return { session: refreshed.session, user: refreshed.session.user || null };
+        }
+      }
+      return { session: null, user: null };
+    }
+    return { session: data.session, user: data.session?.user || null };
+  } catch (err) {
+    console.warn('[Quitmark] Unexpected error fetching session:', err);
     return { session: null, user: null };
   }
-  return { session: data.session, user: data.session?.user || null };
 };
 
 /**

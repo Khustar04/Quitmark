@@ -1,19 +1,31 @@
 import { supabase } from '../lib/supabase';
 
 /**
- * Retrieves the global leaderboard.
+ * Retrieves the global leaderboard with automatic retry on clock skew.
  * @param {number} limitCount - The maximum number of entries to return (default 50)
  * @returns {Promise<Array<{ user_id: string, display_name: string, current_streak: number }>>}
  */
 export async function getLeaderboard(limitCount = 50) {
-  const { data, error } = await supabase.rpc('get_leaderboard', {
-    limit_count: limitCount
-  });
+  let retries = 2;
+  while (retries >= 0) {
+    const { data, error } = await supabase.rpc('get_leaderboard', {
+      limit_count: limitCount
+    });
 
-  if (error) {
-    console.error('Error fetching leaderboard:', error);
-    throw new Error(error.message || 'Failed to fetch leaderboard');
+    if (error) {
+      const msg = (error.message || '').toLowerCase();
+      const isSkew = error.code === 'PGRST303' || msg.includes('jwt') || msg.includes('future');
+      if (isSkew && retries > 0) {
+        await new Promise((res) => setTimeout(res, 600));
+        await supabase.auth.refreshSession().catch(() => {});
+        retries--;
+        continue;
+      }
+      console.error('Error fetching leaderboard:', error);
+      throw new Error(error.message || 'Failed to fetch leaderboard');
+    }
+
+    return data || [];
   }
-
-  return data || [];
+  return [];
 }

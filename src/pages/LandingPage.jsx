@@ -1,4 +1,6 @@
 import { useEffect, useRef } from 'react';
+import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import Hero from '../components/landing/Hero';
 import ProductPreview from '../components/landing/ProductPreview';
@@ -8,6 +10,14 @@ import FinalCTA from '../components/landing/FinalCTA';
 
 export default function LandingPage() {
   const containerRef = useRef(null);
+  const { user, initialized } = useSelector((state) => state.auth);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (initialized && user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [initialized, user, navigate]);
 
   useEffect(() => {
     // Respect user's motion preferences

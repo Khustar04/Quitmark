@@ -20,6 +20,9 @@ const getFriendlyDbErrorMessage = (error) => {
   if (msg.includes('foreign key constraint')) {
     return 'Unable to link check-in. The specified habit does not exist.';
   }
+  if (msg.includes('future') || msg.includes('jwt') || error?.code === 'PGRST303') {
+    return 'Your session was synchronizing. Please refresh.';
+  }
   return error.message || 'Operation failed. Please try again.';
 };
 
@@ -35,10 +38,45 @@ const getAuthenticatedUser = async () => {
 
   const { data: { session }, error } = await supabase.auth.getSession();
   if (error || !session?.user) {
+    const { data: refreshed } = await supabase.auth.refreshSession().catch(() => ({ data: {} }));
+    if (refreshed?.session?.user) {
+      return refreshed.session.user;
+    }
     throw new Error('You must be logged in to perform this action.');
   }
 
   return session.user;
+};
+
+/**
+ * Executes a Supabase query with automatic retry for transient clock skew
+ * ("JWT issued at future", PGRST303) errors.
+ */
+const withClockSkewRetry = async (queryFn, retries = 2) => {
+  try {
+    const { data, error } = await queryFn();
+    if (error) {
+      const msg = (error.message || error.toString() || '').toLowerCase();
+      const isSkew = error.code === 'PGRST303' || msg.includes('future') || msg.includes('jwt');
+      if (isSkew && retries > 0) {
+        // Wait 600ms for database clock to catch up with JWT iat
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        await supabase.auth.refreshSession().catch(() => {});
+        return withClockSkewRetry(queryFn, retries - 1);
+      }
+      throw new Error(getFriendlyDbErrorMessage(error));
+    }
+    return data;
+  } catch (err) {
+    const msg = (err?.message || err?.toString() || '').toLowerCase();
+    const isSkew = err?.code === 'PGRST303' || msg.includes('future') || msg.includes('jwt');
+    if (isSkew && retries > 0) {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      await supabase.auth.refreshSession().catch(() => {});
+      return withClockSkewRetry(queryFn, retries - 1);
+    }
+    throw err;
+  }
 };
 
 /**
@@ -47,15 +85,13 @@ const getAuthenticatedUser = async () => {
 export const getHabits = async () => {
   const user = await getAuthenticatedUser();
 
-  const { data, error } = await supabase
-    .from('habits')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    throw new Error(getFriendlyDbErrorMessage(error));
-  }
+  const data = await withClockSkewRetry(() =>
+    supabase
+      .from('habits')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+  );
 
   return data || [];
 };
@@ -74,20 +110,16 @@ export const createHabit = async (name) => {
     throw new Error('Habit name must be 50 characters or less.');
   }
 
-  const { data, error } = await supabase
-    .from('habits')
-    .insert({
-      name: trimmedName,
-      user_id: user.id,
-    })
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(getFriendlyDbErrorMessage(error));
-  }
-
-  return data;
+  return await withClockSkewRetry(() =>
+    supabase
+      .from('habits')
+      .insert({
+        name: trimmedName,
+        user_id: user.id,
+      })
+      .select()
+      .single()
+  );
 };
 
 /**
@@ -104,22 +136,18 @@ export const updateHabit = async (id, name) => {
     throw new Error('Habit name must be 50 characters or less.');
   }
 
-  const { data, error } = await supabase
-    .from('habits')
-    .update({
-      name: trimmedName,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', id)
-    .eq('user_id', user.id)
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(getFriendlyDbErrorMessage(error));
-  }
-
-  return data;
+  return await withClockSkewRetry(() =>
+    supabase
+      .from('habits')
+      .update({
+        name: trimmedName,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .select()
+      .single()
+  );
 };
 
 /**
@@ -128,15 +156,13 @@ export const updateHabit = async (id, name) => {
 export const deleteHabit = async (id) => {
   const user = await getAuthenticatedUser();
 
-  const { error } = await supabase
-    .from('habits')
-    .delete()
-    .eq('id', id)
-    .eq('user_id', user.id);
-
-  if (error) {
-    throw new Error(getFriendlyDbErrorMessage(error));
-  }
+  await withClockSkewRetry(() =>
+    supabase
+      .from('habits')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id)
+  );
 
   return true;
 };
@@ -147,15 +173,13 @@ export const deleteHabit = async (id) => {
 export const getAllUserCheckins = async () => {
   const user = await getAuthenticatedUser();
 
-  const { data, error } = await supabase
-    .from('habit_checkins')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('check_in_date', { ascending: false });
-
-  if (error) {
-    throw new Error(getFriendlyDbErrorMessage(error));
-  }
+  const data = await withClockSkewRetry(() =>
+    supabase
+      .from('habit_checkins')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('check_in_date', { ascending: false })
+  );
 
   return data || [];
 };
@@ -172,25 +196,21 @@ export const upsertTodayCheckin = async (habitId, status) => {
     throw new Error('Invalid status. Status must be "completed" or "missed".');
   }
 
-  const { data, error } = await supabase
-    .from('habit_checkins')
-    .upsert(
-      {
-        habit_id: habitId,
-        user_id: user.id,
-        check_in_date: today,
-        status,
-      },
-      { onConflict: 'habit_id,check_in_date' }
-    )
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(getFriendlyDbErrorMessage(error));
-  }
-
-  return data;
+  return await withClockSkewRetry(() =>
+    supabase
+      .from('habit_checkins')
+      .upsert(
+        {
+          habit_id: habitId,
+          user_id: user.id,
+          check_in_date: today,
+          status,
+        },
+        { onConflict: 'habit_id,check_in_date' }
+      )
+      .select()
+      .single()
+  );
 };
 
 /**
@@ -199,18 +219,14 @@ export const upsertTodayCheckin = async (habitId, status) => {
 export const getHabitById = async (id) => {
   const user = await getAuthenticatedUser();
 
-  const { data, error } = await supabase
-    .from('habits')
-    .select('*')
-    .eq('id', id)
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(getFriendlyDbErrorMessage(error));
-  }
-
-  return data;
+  return await withClockSkewRetry(() =>
+    supabase
+      .from('habits')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .maybeSingle()
+  );
 };
 
 /**
@@ -219,16 +235,14 @@ export const getHabitById = async (id) => {
 export const getHabitCheckins = async (habitId) => {
   const user = await getAuthenticatedUser();
 
-  const { data, error } = await supabase
-    .from('habit_checkins')
-    .select('*')
-    .eq('habit_id', habitId)
-    .eq('user_id', user.id)
-    .order('check_in_date', { ascending: false });
-
-  if (error) {
-    throw new Error(getFriendlyDbErrorMessage(error));
-  }
+  const data = await withClockSkewRetry(() =>
+    supabase
+      .from('habit_checkins')
+      .select('*')
+      .eq('habit_id', habitId)
+      .eq('user_id', user.id)
+      .order('check_in_date', { ascending: false })
+  );
 
   return data || [];
 };

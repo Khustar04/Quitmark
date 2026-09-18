@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import ThemeToggle from '../common/ThemeToggle';
 
 export default function AuthLayout({ children, heading, supportingText, onBackAction, hideNavigation }) {
   return (
@@ -25,7 +24,6 @@ export default function AuthLayout({ children, heading, supportingText, onBackAc
             <span>Back to Home</span>
           </Link>
         )}
-          <ThemeToggle />
         </div>
       )}
 

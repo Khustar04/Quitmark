@@ -34,16 +34,28 @@ export default function App() {
     });
 
     // 2. Subscribe to auth events (LOGIN, LOGOUT, TOKEN_REFRESH, OAUTH_REDIRECT)
-    const { data: { subscription } } = onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = onAuthStateChange((event, session) => {
       if (session?.user) {
         dispatch(setAuth({ user: session.user, session }));
-      } else {
+      } else if (event === 'SIGNED_OUT') {
         dispatch(clearAuth());
       }
     });
 
+    // 3. Proactively refresh/verify session when resuming app from background (critical for PWA)
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        const { session, user } = await getSession();
+        if (session && user) {
+          dispatch(setAuth({ user, session }));
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       subscription?.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [dispatch]);
 

@@ -12,7 +12,14 @@ if (!supabaseUrl || !supabasePublishableKey) {
 // Client initialization - safe fallback if env variables are not yet configured
 export const supabase =
   supabaseUrl && supabasePublishableKey
-    ? createClient(supabaseUrl, supabasePublishableKey)
+    ? createClient(supabaseUrl, supabasePublishableKey, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+        },
+      })
     : null;
 
 export default supabase;
