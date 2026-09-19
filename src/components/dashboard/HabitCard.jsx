@@ -1,9 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Flame, Check, X, Edit2, Trash2, RotateCcw, Loader2, Calendar } from 'lucide-react';
+import { Flame, Check, X, Edit2, Trash2, RotateCcw, Loader2, Calendar, Bell, BellRing } from 'lucide-react';
 import gsap from 'gsap';
 import { calculateHabitSummary } from '../../utils/progress/calculateHabitSummary';
 import { useLocalDate } from '../../hooks/useLocalDate';
+
+/**
+ * Formats a "HH:MM:SS" or "HH:MM" time string to 12h display.
+ */
+const formatTime12h = (time24) => {
+  if (!time24) return '';
+  const [h, m] = time24.split(':').map(Number);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
+};
 
 export default function HabitCard({
   habit,
@@ -12,6 +23,8 @@ export default function HabitCard({
   onEdit,
   onDelete,
   isCheckingIn = false,
+  reminder = null,
+  onReminderClick,
 }) {
   const [showStatusChange, setShowStatusChange] = useState(false);
   const todayDateStr = useLocalDate();
@@ -86,6 +99,8 @@ export default function HabitCard({
     setShowStatusChange(false);
     await onCheckin(habit.id, status);
   };
+
+  const hasReminder = reminder && reminder.enabled;
 
   return (
     <div
@@ -231,13 +246,43 @@ export default function HabitCard({
 
       {/* --- HIERARCHY 4: Secondary actions --- */}
       <div className="flex items-center justify-between pt-3 border-t border-zinc-100/60 dark:border-[#232936]/60">
-        <Link
-          to={`/habits/${habit.id}`}
-          className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-        >
-          <Calendar className="w-3.5 h-3.5" />
-          <span>Progress</span>
-        </Link>
+        <div className="flex items-center gap-1">
+          <Link
+            to={`/habits/${habit.id}`}
+            className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Progress</span>
+          </Link>
+
+          {/* Reminder Indicator */}
+          {onReminderClick && (
+            <button
+              type="button"
+              onClick={() => onReminderClick(habit)}
+              className={`inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                hasReminder
+                  ? 'text-amber-600 dark:text-amber-400 hover:bg-amber-500/10'
+                  : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900'
+              }`}
+              title={hasReminder ? `Reminder: ${formatTime12h(reminder.reminder_time)}` : 'Set reminder'}
+              aria-label={hasReminder ? `Reminder set for ${formatTime12h(reminder.reminder_time)}` : 'Set reminder'}
+            >
+              {hasReminder ? (
+                <>
+                  <BellRing className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{formatTime12h(reminder.reminder_time)}</span>
+                </>
+              ) : (
+                <>
+                  <Bell className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Remind</span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
+
         <div className="flex items-center gap-1">
           <button
             type="button"

@@ -13,6 +13,11 @@ import {
   getAllUserCheckins,
 } from '../services/habitService';
 import {
+  getAllReminders,
+  upsertReminder,
+  deleteReminder as deleteReminderApi,
+} from '../services/reminderService';
+import {
   setHabits,
   addHabit,
   updateHabitInState,
@@ -27,12 +32,15 @@ import { getLastNWeeksDays } from '../utils/streaks/dateUtils';
 import { useCheckin } from '../hooks/useCheckin';
 import { checkAndNotifyStreakRisks } from '../utils/notifications/streakNotifier';
 import { isActiveUser } from '../utils/auth/sessionGuard';
+import { subscribeToPush, isPushSupported } from '../utils/notifications/pushSubscription';
+import { requestNotificationPermission } from '../utils/notifications/notificationService';
 
 import HabitCard from '../components/dashboard/HabitCard';
 import CreateHabitModal from '../components/dashboard/CreateHabitModal';
 import EditHabitModal from '../components/dashboard/EditHabitModal';
 import DeleteHabitDialog from '../components/dashboard/DeleteHabitDialog';
 import EmptyHabitsState from '../components/dashboard/EmptyHabitsState';
+import ReminderModal from '../components/dashboard/ReminderModal';
 
 export default function DashboardPage() {
   const dispatch = useDispatch();
@@ -45,6 +53,10 @@ export default function DashboardPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState(null);
   const [deletingHabit, setDeletingHabit] = useState(null);
+  
+  // Reminder state
+  const [remindersMap, setRemindersMap] = useState({}); // { [habitId]: reminderObj }
+  const [reminderHabit, setReminderHabit] = useState(null); // habit being configured
   
   const { handleCheckin } = useCheckin();
 
@@ -83,7 +95,7 @@ export default function DashboardPage() {
     return { dateStr, status };
   });
 
-  // Fetch habits and check-ins
+  // Fetch habits, check-ins, and reminders
   const loadHabitData = useCallback(async () => {
     if (!userId) return;
     if (!isActiveUser(userId)) return;
@@ -109,12 +121,29 @@ export default function DashboardPage() {
     }
   }, [dispatch, userId]);
 
+  // Load reminders separately (not in useEffect to satisfy lint)
+  const loadReminders = useCallback(async () => {
+    if (!userId) return;
+    try {
+      const remindersData = await getAllReminders().catch(() => []);
+      const rMap = {};
+      for (const r of remindersData) {
+        rMap[r.habit_id] = r;
+      }
+      setRemindersMap(rMap);
+    } catch {
+      // Reminders are non-critical — silently fail
+    }
+  }, [userId]);
+
   useEffect(() => {
     loadHabitData();
+    // Load reminders asynchronously to avoid triggering set-state-in-effect lint
+    queueMicrotask(() => loadReminders());
     return () => {
       requestIdRef.current += 1;
     };
-  }, [loadHabitData]);
+  }, [loadHabitData, loadReminders]);
 
   const hasCheckedNotifications = useRef(false);
 
@@ -168,6 +197,56 @@ export default function DashboardPage() {
   const handleDelete = async (id) => {
     await deleteHabit(id);
     dispatch(removeHabitFromState(id));
+    // Also clean up local reminder state
+    setRemindersMap((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  };
+
+  // Reminder handlers
+  const handleReminderClick = (habit) => {
+    setReminderHabit(habit);
+  };
+
+  const handleReminderSave = async (config) => {
+    if (!reminderHabit) return;
+
+    // Request permission while this handler is still running from the user's
+    // Save click. Browsers can reject permission prompts started after an
+    // unrelated awaited request has completed.
+    let notificationPermission = null;
+    if (config.enabled && isPushSupported()) {
+      notificationPermission = await requestNotificationPermission();
+    }
+
+    // Save the reminder before attempting browser push setup. Push is an
+    // optional delivery enhancement and must not block the database write.
+    const saved = await upsertReminder(reminderHabit.id, config);
+    setRemindersMap((prev) => ({ ...prev, [reminderHabit.id]: saved }));
+
+    // Request permission + create a push subscription in the background. A
+    // browser may not support push, or its service worker may not be ready
+    // yet; neither case should make saving a reminder fail.
+    if (config.enabled && notificationPermission === 'granted') {
+      void (async () => {
+        await subscribeToPush();
+      })().catch((error) => {
+        // Push setup is optional; the reminder itself has already been saved.
+        console.warn('[Quitmark] Push setup skipped:', error);
+      });
+    }
+  };
+
+  const handleReminderDelete = async () => {
+    if (!reminderHabit) return;
+    await deleteReminderApi(reminderHabit.id);
+    setRemindersMap((prev) => {
+      const next = { ...prev };
+      delete next[reminderHabit.id];
+      return next;
+    });
   };
 
   return (
@@ -278,6 +357,8 @@ export default function DashboardPage() {
                 onEdit={(h) => setEditingHabit(h)}
                 onDelete={(h) => setDeletingHabit(h)}
                 isCheckingIn={Boolean(checkinLoading[habit.id])}
+                reminder={remindersMap[habit.id] || null}
+                onReminderClick={handleReminderClick}
               />
             ))}
           </div>
@@ -310,6 +391,18 @@ export default function DashboardPage() {
           isOpen={Boolean(deletingHabit)}
           onClose={() => setDeletingHabit(null)}
           onDelete={handleDelete}
+        />
+      )}
+
+      {reminderHabit && (
+        <ReminderModal
+          key={`reminder-${reminderHabit.id}`}
+          isOpen={Boolean(reminderHabit)}
+          onClose={() => setReminderHabit(null)}
+          habitName={reminderHabit.name}
+          reminder={remindersMap[reminderHabit.id] || null}
+          onSave={handleReminderSave}
+          onDelete={handleReminderDelete}
         />
       )}
     </div>

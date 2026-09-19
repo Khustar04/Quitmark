@@ -13,6 +13,8 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
         navigateFallback: '/index.html',
+        // Import custom service worker for Web Push notification handling
+        importScripts: ['/custom-sw.js'],
         // Do NOT cache Supabase API calls. Only cache static assets (like fonts)
         runtimeCaching: [
           {

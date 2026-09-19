@@ -6,6 +6,7 @@ import { setAuth, clearAuth } from './store/slices/authSlice';
 import { resetHabitsState } from './store/slices/habitsSlice';
 import { syncUserTimezone } from './services/authService';
 import { setActiveUserId } from './utils/auth/sessionGuard';
+import { unsubscribeFromPush } from './utils/notifications/pushSubscription';
 
 import RootLayout from './layouts/RootLayout';
 import LandingPage from './pages/LandingPage';
@@ -33,6 +34,8 @@ export default function App() {
       setActiveUserId(null);
       dispatch(clearAuth());
       dispatch(resetHabitsState());
+      // Clean up push subscription on logout
+      unsubscribeFromPush().catch(() => {});
     };
 
     const applySession = (session, user) => {
