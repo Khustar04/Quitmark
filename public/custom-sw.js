@@ -42,14 +42,19 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const targetUrl = event.notification.data?.url || '/dashboard';
+  const rawUrl = event.notification.data?.url || '/dashboard';
+  const targetUrl = new URL(rawUrl, self.location.origin).href;
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clientList) => {
       // If the app is already open, focus it
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
-          client.navigate(targetUrl);
+          try {
+            await client.navigate(targetUrl);
+          } catch (error) {
+            console.warn('Unable to navigate notification client:', error);
+          }
           return client.focus();
         }
       }

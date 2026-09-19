@@ -19,7 +19,7 @@ export const getLocalDateString = (date = new Date()) => {
  */
 export const getPreviousDayString = (dateStr) => {
   const [year, month, day] = dateStr.split('-').map(Number);
-  const date = new Date(year, month - 1, day);
+  const date = new Date(year, month - 1, day, 12, 0, 0);
   date.setDate(date.getDate() - 1);
   return getLocalDateString(date);
 };

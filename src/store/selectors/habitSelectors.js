@@ -6,22 +6,23 @@ export const selectHabits = (state) => state.habits.items || [];
 export const selectCheckinsByHabit = (state) => state.habits.checkinsByHabit || {};
 export const selectHabitsLoading = (state) => state.habits.loading;
 export const selectHabitsError = (state) => state.habits.error;
+const EMPTY_CHECKINS = [];
 
 /**
  * Returns check-ins for a specific habit.
  */
 export const selectHabitCheckins = (state, habitId) => {
   const checkinsMap = selectCheckinsByHabit(state);
-  return checkinsMap[habitId] || [];
+  return checkinsMap[habitId] || EMPTY_CHECKINS;
 };
 
 /**
  * Returns progress summary statistics for a specific habit.
  */
-export const selectHabitSummary = (state, habitId) => {
-  const checkins = selectHabitCheckins(state, habitId);
-  return calculateHabitSummary(checkins);
-};
+export const selectHabitSummary = createSelector(
+  [selectHabitCheckins, () => getLocalDateString()],
+  (checkins, today) => calculateHabitSummary(checkins, today)
+);
 
 /**
  * Returns all habits augmented with their live progress summary (memoized).

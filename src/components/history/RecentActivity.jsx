@@ -4,7 +4,8 @@ import { formatFullDisplayDate } from '../../utils/streaks/dateUtils';
 export default function RecentActivity({ checkins = [] }) {
   // Sort descending by date and take the first 10
   const recentCheckins = [...checkins]
-    .sort((a, b) => b.check_in_date.localeCompare(a.check_in_date))
+    .filter((c) => Boolean(c?.check_in_date))
+    .sort((a, b) => (b.check_in_date || '').localeCompare(a.check_in_date || ''))
     .slice(0, 10);
 
   if (recentCheckins.length === 0) {

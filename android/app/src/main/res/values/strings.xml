@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Quitmark</string>
+    <string name="title_activity_main">Quitmark</string>
+    <string name="package_name">com.quitmark.app</string>
+    <string name="custom_url_scheme">com.quitmark.app</string>
+</resources>

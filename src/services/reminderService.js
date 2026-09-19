@@ -137,7 +137,16 @@ export const deleteReminder = async (habitId) => {
  */
 export const savePushSubscription = async (subscription) => {
   const user = await getAuthenticatedUser();
+
+  if (!subscription || typeof subscription.toJSON !== 'function') {
+    throw new Error('Invalid push subscription.');
+  }
+
   const subJson = subscription.toJSON();
+
+  if (!subJson?.endpoint || !subJson?.keys?.p256dh || !subJson?.keys?.auth) {
+    throw new Error('Invalid push subscription: endpoint or encryption keys are missing.');
+  }
 
   return await withClockSkewRetry(() =>
     supabase

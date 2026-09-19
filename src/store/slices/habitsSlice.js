@@ -74,8 +74,10 @@ export const habitsSlice = createSlice({
     },
     setSingleHabit: (state, action) => {
       const habit = action.payload;
-      const exists = state.items.find(h => h.id === habit.id);
-      if (!exists) {
+      const index = state.items.findIndex((h) => h.id === habit.id);
+      if (index !== -1) {
+        state.items[index] = { ...state.items[index], ...habit };
+      } else {
         state.items.push(habit);
       }
       if (!state.checkinsByHabit[habit.id]) {

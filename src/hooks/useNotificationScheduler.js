@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { getNotificationPreferences } from '../utils/notifications/notificationPreferences';
 import { sendNotification } from '../utils/notifications/notificationService';
+import { getLocalDateString } from '../utils/streaks/dateUtils';
 
 const WINDOWS = {
   morning: { start: 9, end: 11 }, // 9 AM to 11:59 AM
@@ -21,7 +22,7 @@ export function useNotificationScheduler() {
   }, [habits, checkinsByHabit]);
 
   useEffect(() => {
-    const checkSchedule = () => {
+    const checkSchedule = async () => {
       const prefs = getNotificationPreferences();
       if (!prefs.enabled || !prefs.streakReminders) return;
 
@@ -40,9 +41,7 @@ export function useNotificationScheduler() {
       if (!currentWindow) return;
 
       // We use local YYYY-MM-DD
-      const offset = now.getTimezoneOffset();
-      const localNow = new Date(now.getTime() - (offset * 60 * 1000));
-      const todayStr = localNow.toISOString().split('T')[0];
+      const todayStr = getLocalDateString(now);
 
       const lastSentDate = localStorage.getItem('quitmark_last_notif_date');
       const lastSentWindow = localStorage.getItem('quitmark_last_notif_window');
@@ -74,7 +73,7 @@ export function useNotificationScheduler() {
         const title = 'Quitmark Reminder';
         const body = `You have ${incompleteCount} habit${incompleteCount > 1 ? 's' : ''} left to complete this ${currentWindow}! 🔥`;
         
-        const success = sendNotification(title, { body });
+        const success = await sendNotification(title, { body });
         if (success) {
           localStorage.setItem('quitmark_last_notif_date', todayStr);
           localStorage.setItem('quitmark_last_notif_window', currentWindow);
@@ -88,9 +87,9 @@ export function useNotificationScheduler() {
     };
 
     // Check immediately on mount
-    checkSchedule();
+    void checkSchedule();
     // Then every 1 minute
-    const interval = setInterval(checkSchedule, 60 * 1000);
+    const interval = setInterval(() => void checkSchedule(), 60 * 1000);
 
     return () => clearInterval(interval);
   }, []);

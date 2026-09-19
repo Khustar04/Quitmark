@@ -94,7 +94,7 @@ export default function LandingPage() {
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 z-0 hidden dark:block bg-cover bg-center bg-no-repeat opacity-85 animate-light-pulse transform-gpu will-change-[transform,opacity]"
         style={{
-          backgroundImage: "url('/landing-bg.png')",
+          backgroundImage: "url('/landing-bg.webp')",
         }}
       />
 

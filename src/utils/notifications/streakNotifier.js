@@ -1,4 +1,4 @@
-import { getNotificationPermission } from './notificationService';
+import { getNotificationPermission, sendNotification } from './notificationService';
 import { isStreakAtRisk } from './isStreakAtRisk';
 import { getNotificationPreferences } from './notificationPreferences';
 
@@ -19,19 +19,19 @@ const notifiedHabitIds = new Set();
  * @param {Array} habits - List of user habit objects
  * @param {Object} checkinsByHabit - Map of habitId -> array of check-in records
  */
-export const checkAndNotifyStreakRisks = (habits = [], checkinsByHabit = {}) => {
+export const checkAndNotifyStreakRisks = async (habits = [], checkinsByHabit = {}) => {
   if (typeof window === 'undefined' || !('Notification' in window)) return;
   if (getNotificationPermission() !== 'granted') return;
   
   const prefs = getNotificationPreferences();
   if (!prefs.enabled || !prefs.streakReminders) return;
 
-  habits.forEach((habit) => {
-    if (!habit || !habit.id) return;
+  for (const habit of habits) {
+    if (!habit || !habit.id) continue;
 
     // Prevent duplicate notifications in the same session
     if (notifiedHabitIds.has(habit.id)) {
-      return;
+      continue;
     }
 
     const checkins = checkinsByHabit[habit.id] || [];
@@ -39,15 +39,14 @@ export const checkAndNotifyStreakRisks = (habits = [], checkinsByHabit = {}) => 
     // Trigger notification if the streak is at risk
     if (isStreakAtRisk(checkins)) {
       try {
-        new Notification(`Habit: ${habit.name}`, {
+        const sent = await sendNotification(`Habit: ${habit.name}`, {
           body: '🔥 Your streak is at risk. Check in today to keep it alive.',
         });
         
-        // Mark as notified so we don't spam them again
-        notifiedHabitIds.add(habit.id);
+        if (sent) notifiedHabitIds.add(habit.id);
       } catch (err) {
         console.error('Failed to trigger streak notification:', err);
       }
     }
-  });
+  }
 };

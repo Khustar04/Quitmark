@@ -4,7 +4,12 @@
  */
 
 export const isNotificationSupported = () => {
-  return 'Notification' in window;
+  return typeof window !== 'undefined' && 'Notification' in window;
+};
+
+const isMobileBrowser = () => {
+  if (typeof navigator === 'undefined') return false;
+  return navigator.userAgentData?.mobile === true || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 };
 
 export const getNotificationPermission = () => {
@@ -29,12 +34,29 @@ export const requestNotificationPermission = async () => {
   }
 };
 
-export const sendNotification = (title, options = {}) => {
+export const sendNotification = async (title, options = {}) => {
   if (!isNotificationSupported() || Notification.permission !== 'granted') {
     return false;
   }
 
   try {
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.ready;
+      if (registration?.showNotification) {
+        await registration.showNotification(title, {
+          icon: '/pwa-192x192.png',
+          badge: '/pwa-192x192.png',
+          ...options,
+        });
+        return true;
+      }
+    }
+
+    if (isMobileBrowser()) {
+      console.warn('[Quitmark] An active service worker is required for mobile notifications.');
+      return false;
+    }
+
     const notification = new Notification(title, {
       icon: '/favicon.ico',
       ...options

@@ -6,6 +6,10 @@ import { supabase } from '../lib/supabase';
  * @returns {Promise<Array<{ user_id: string, display_name: string, current_streak: number }>>}
  */
 export async function getLeaderboard(limitCount = 50) {
+  if (!supabase) {
+    throw new Error('Leaderboard is unavailable because the app is not configured.');
+  }
+
   const requestedLimit = Number.isInteger(limitCount)
     ? Math.min(Math.max(limitCount, 1), 100)
     : 50;

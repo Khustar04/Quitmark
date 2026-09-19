@@ -1,4 +1,6 @@
 import supabase from '../lib/supabase';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 
 /**
  * Translates raw technical Supabase errors into clean, user-friendly messages.
@@ -55,15 +57,29 @@ const ensureClient = () => {
  * Helper to add a timeout to a promise.
  */
 const withTimeout = (promise, ms = 15000) => {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) =>
-      setTimeout(
-        () => reject(new Error('Request timed out. Please check your Supabase SMTP configuration as the server took too long to respond.')),
-        ms
-      )
-    ),
-  ]);
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(
+      () => reject(new Error('Request timed out. Please check your Supabase SMTP configuration as the server took too long to respond.')),
+      ms
+    );
+
+    promise.then(resolve, reject).finally(() => clearTimeout(timeoutId));
+  });
+};
+
+const pendingAuthRequests = new Map();
+
+const runSingleAuthRequest = (key, request) => {
+  let pending = pendingAuthRequests.get(key);
+
+  if (!pending) {
+    pending = Promise.resolve()
+      .then(request)
+      .finally(() => pendingAuthRequests.delete(key));
+    pendingAuthRequests.set(key, pending);
+  }
+
+  return withTimeout(pending);
 };
 
 /**
@@ -76,8 +92,9 @@ export const signUpWithEmail = async (email, password) => {
       ? `${window.location.origin}/dashboard`
       : '/dashboard';
 
-  const { data, error } = await withTimeout(
-    supabase.auth.signUp({
+  const { data, error } = await runSingleAuthRequest(
+    `signup:${email.trim().toLowerCase()}`,
+    () => supabase.auth.signUp({
       email,
       password,
       options: {
@@ -115,8 +132,10 @@ export const signInWithEmail = async (email, password) => {
  */
 export const signInWithGoogle = async () => {
   ensureClient();
-  const redirectUrl =
-    typeof window !== 'undefined'
+  const isNative = Capacitor.isNativePlatform();
+  const redirectUrl = isNative
+    ? 'com.quitmark.app://auth/callback'
+    : typeof window !== 'undefined'
       ? `${window.location.origin}/dashboard`
       : '/dashboard';
 
@@ -124,6 +143,7 @@ export const signInWithGoogle = async () => {
     provider: 'google',
     options: {
       redirectTo: redirectUrl,
+      skipBrowserRedirect: isNative,
       queryParams: {
         access_type: 'offline',
         prompt: 'consent',
@@ -133,6 +153,10 @@ export const signInWithGoogle = async () => {
 
   if (error) {
     throw new Error(getFriendlyAuthErrorMessage(error));
+  }
+
+  if (isNative && data?.url) {
+    await Browser.open({ url: data.url });
   }
 
   return data;
@@ -213,8 +237,9 @@ export const sendPasswordResetEmail = async (email) => {
       ? `${window.location.origin}/reset-password`
       : '/reset-password';
 
-  const { error } = await withTimeout(
-    supabase.auth.resetPasswordForEmail(email, {
+  const { error } = await runSingleAuthRequest(
+    `password-reset:${email.trim().toLowerCase()}`,
+    () => supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,
     })
   );

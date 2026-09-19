@@ -15,18 +15,40 @@ dist-ssr
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
+**/.idea/
 .DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*.iml
 
-# Environment variables (sensitive)
+# Environment variables & secrets (sensitive)
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.jks
+*.keystore
+google-services.json
+GoogleService-Info.plist
+
+# Android local & build files
+**/android/local.properties
+**/android/.gradle/
+**/android/build/
+**/android/app/build/
+**/android/.idea/
+**/android/.kotlin/
+**/android/captures/
+**/android/app/src/main/assets/public/
+**/android/app/src/main/assets/capacitor.config.json
+**/android/app/src/main/assets/capacitor.plugins.json
+**/android/capacitor-cordova-android-plugins/
 
 # Images accidentally committed
 *.jpeg
@@ -34,3 +56,4 @@ dist-ssr
 *.png
 !public/**
 !src/assets/**
+!android/app/src/main/res/**

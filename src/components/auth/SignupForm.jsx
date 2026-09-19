@@ -58,6 +58,8 @@ export default function SignupForm() {
         // Active session established immediately
         dispatch(setAuth({ user: data.user, session: data.session }));
         navigate('/dashboard');
+      } else if (data?.user?.identities && data.user.identities.length === 0) {
+        setServerError('This email is already registered. Please log in instead.');
       } else {
         // Email confirmation is required
         setConfirmationPending(true);

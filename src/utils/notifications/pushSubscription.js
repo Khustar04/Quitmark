@@ -29,6 +29,7 @@ const getReadyServiceWorker = async () => {
  */
 export const isPushSupported = () => {
   return (
+    typeof window !== 'undefined' &&
     'serviceWorker' in navigator &&
     'PushManager' in window &&
     'Notification' in window

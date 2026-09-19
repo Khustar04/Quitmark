@@ -48,17 +48,19 @@ export default function ResetPasswordPage() {
 
     if (!supabase) return undefined;
 
-    // Supabase will automatically process the hash/code in the URL.
-    // We listen to the auth state change to catch the PASSWORD_RECOVERY event or the session establishment.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const hasRecoveryParams = searchParams.has('code') || hashParams.get('type') === 'recovery';
+
+    // PKCE recovery links can emit SIGNED_IN after exchanging their code, so a
+    // valid session on this page is sufficient to complete the password reset.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
       
-      if (event === 'PASSWORD_RECOVERY') {
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && (hasRecoveryParams || session))) {
         isValidRecoveryRef.current = true;
         setRecoveryReady(true);
         setError(null);
-      } else if (event === 'SIGNED_IN' && !isValidRecoveryRef.current) {
-        setError('You are already logged in. To change your password securely, please log out and request a new reset link.');
       } else if (event === 'SIGNED_OUT' && !isResettingRef.current) {
         // If they get signed out, they don't have a valid recovery session
         setError('Your password reset link is invalid or has expired. If you opened the link in a different browser than where you requested it, please copy the link and open it in the original browser.');
@@ -69,12 +71,14 @@ export default function ResetPasswordPage() {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (isValidRecoveryRef.current) return;
+      if (!mounted || isValidRecoveryRef.current) return;
 
-      if (mounted && !session) {
+      if (session) {
+        isValidRecoveryRef.current = true;
+        setRecoveryReady(true);
+        setError(null);
+      } else {
         setError('Invalid or expired password reset link. Please request a new one.');
-      } else if (mounted && session) {
-        setError('You are already logged in. To change your password securely, please log out and request a new reset link.');
       }
     };
     
