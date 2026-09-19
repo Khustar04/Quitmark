@@ -21,6 +21,9 @@ const getFriendlyDbErrorMessage = (error) => {
   if (msg.includes('foreign key constraint')) {
     return 'Unable to link check-in. The specified habit does not exist.';
   }
+  if (msg.includes('only be recorded for today')) {
+    return 'Check-ins can only be recorded on the current day.';
+  }
   if (msg.includes('future') || msg.includes('jwt') || error?.code === 'PGRST303') {
     return 'Your session was synchronizing. Please refresh.';
   }
@@ -188,7 +191,7 @@ export const getAllUserCheckins = async () => {
 
 /**
  * Records or updates today's check-in for a habit.
- * Strictly prevents future date insertion by locking date to today's local calendar day.
+ * The database independently verifies that this is the user's current local day.
  */
 export const upsertTodayCheckin = async (habitId, status) => {
   await syncUserTimezone();
