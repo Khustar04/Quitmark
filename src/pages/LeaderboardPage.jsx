@@ -203,7 +203,7 @@ export default function LeaderboardPage() {
                         {entry.current_streak}
                       </span>
                       <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                        days
+                        {entry.current_streak === 1 ? 'day' : 'days'}
                       </span>
                     </div>
                   </div>

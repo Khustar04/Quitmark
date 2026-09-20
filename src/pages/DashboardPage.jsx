@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Plus, AlertCircle, RefreshCw, Bell, X } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { Plus, AlertCircle, RefreshCw } from 'lucide-react';
 import gsap from 'gsap';
 import { selectDashboardSummary } from '../store/selectors/habitSelectors';
 import DashboardSummaryCards from '../components/dashboard/DashboardSummaryCards';
@@ -39,7 +40,6 @@ import {
   cancelNativeHabitReminder,
   syncAllNativeHabitReminders,
   ensureNotificationChannel,
-  requestNativeNotificationPermission,
   isNativeApp,
 } from '../utils/notifications/nativeReminderService';
 
@@ -49,9 +49,11 @@ import EditHabitModal from '../components/dashboard/EditHabitModal';
 import DeleteHabitDialog from '../components/dashboard/DeleteHabitDialog';
 import EmptyHabitsState from '../components/dashboard/EmptyHabitsState';
 import ReminderModal from '../components/dashboard/ReminderModal';
+import NotificationPermissionModal from '../components/notifications/NotificationPermissionModal';
 
 export default function DashboardPage() {
   const dispatch = useDispatch();
+  const location = useLocation();
   const { items: habits, checkinsByHabit, loading, checkinLoading, error } = useSelector(
     (state) => state.habits
   );
@@ -65,12 +67,6 @@ export default function DashboardPage() {
   // Reminder state
   const [remindersMap, setRemindersMap] = useState({}); // { [habitId]: reminderObj }
   const [reminderHabit, setReminderHabit] = useState(null); // habit being configured
-  const [notificationPermission, setNotificationPermission] = useState(() => {
-    if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported';
-    return Notification.permission;
-  });
-  const [isSubscribingPush, setIsSubscribingPush] = useState(false);
-  const [isBannerDismissed, setIsBannerDismissed] = useState(false);
   const hasAutoSubscribedRef = useRef(false);
   
   const { handleCheckin } = useCheckin();
@@ -184,12 +180,34 @@ export default function DashboardPage() {
     }
   }, [loading, habits, checkinsByHabit]);
 
+  // Scroll to habits section if hash is #habits or #habits-section
+  useEffect(() => {
+    const isHabitsHash = location.hash === '#habits' || location.hash === '#habits-section';
+    if (isHabitsHash && !loading) {
+      const el = document.getElementById('habits-section');
+      if (el) {
+        const timeout = setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
+        return () => clearTimeout(timeout);
+      }
+    }
+  }, [loading, location.hash]);
+
   // Proactively ensure push subscription is registered in Supabase
   // if reminders are active and permission is already granted on this device
   useEffect(() => {
     const autoSubscribeIfGranted = async () => {
       if (!isPushSupported()) return;
       if (Notification.permission !== 'granted') return;
+
+      // Only attempt proactive push subscription if an active service worker registration exists
+      try {
+        const reg = await navigator.serviceWorker?.getRegistration();
+        if (!reg?.active) return;
+      } catch {
+        return;
+      }
 
       const hasActive = Object.values(remindersMap).some((r) => r?.enabled);
       if (!hasActive) return;
@@ -207,20 +225,19 @@ export default function DashboardPage() {
     autoSubscribeIfGranted();
   }, [remindersMap]);
 
-  // On native Android app: ensure notification channel is registered and request permission on startup
+  // On native Android app: ensure notification channel is registered on startup
   useEffect(() => {
     if (isNativeApp()) {
       ensureNotificationChannel();
-      requestNativeNotificationPermission();
     }
   }, []);
 
   // Sync all habit reminders with native Android alarms when habits or reminders change
   useEffect(() => {
     if (isNativeApp() && habits.length > 0) {
-      syncAllNativeHabitReminders(habits, remindersMap);
+      syncAllNativeHabitReminders(habits, remindersMap, checkinsByHabit);
     }
-  }, [habits, remindersMap]);
+  }, [habits, remindersMap, checkinsByHabit]);
 
   // GSAP animation for header entrance and habit cards stagger
   useEffect(() => {
@@ -336,73 +353,10 @@ export default function DashboardPage() {
     });
   };
 
-  const handleEnableNotifications = async () => {
-    setIsSubscribingPush(true);
-    try {
-      const permission = await requestNotificationPermission();
-      setNotificationPermission(permission);
-      if (permission === 'granted') {
-        await subscribeToPush();
-      }
-    } catch (err) {
-      console.error('[Quitmark] Failed to enable push notifications:', err);
-    } finally {
-      setIsSubscribingPush(false);
-    }
-  };
-
-  const hasActiveReminders = Object.values(remindersMap).some((r) => r?.enabled);
-  const showNotificationBanner =
-    !isBannerDismissed &&
-    !isNativeApp() &&
-    isPushSupported() &&
-    notificationPermission === 'default' &&
-    hasActiveReminders;
-
   return (
     <div ref={containerRef} className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 min-h-screen flex flex-col">
-      {/* Push Notification Device Enable Banner */}
-      {showNotificationBanner && (
-        <div
-          role="status"
-          className="mb-6 p-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/20 backdrop-blur-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-              <Bell className="w-5 h-5" />
-            </div>
-            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-              Enable notifications on this device to receive your habit reminders.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-            <button
-              type="button"
-              onClick={handleEnableNotifications}
-              disabled={isSubscribingPush}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-semibold transition-all shadow-sm shadow-emerald-600/25 hover:shadow-emerald-600/35 active:scale-[0.98] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-            >
-              {isSubscribingPush ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  <span>Enabling...</span>
-                </>
-              ) : (
-                'Enable'
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsBannerDismissed(true)}
-              className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
-              title="Dismiss"
-              aria-label="Dismiss notification banner"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Automatic Notification Permission Modal */}
+      <NotificationPermissionModal />
 
       {/* 1. Header Section */}
       <div
@@ -439,7 +393,7 @@ export default function DashboardPage() {
             className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition-all shadow-sm shadow-emerald-600/25 dark:shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-emerald-600/35 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>+ New Habit</span>
+            <span>New Habit</span>
           </button>
         </div>
       </div>
@@ -474,47 +428,51 @@ export default function DashboardPage() {
             />
           ))}
         </div>
-      ) : habits.length === 0 ? (
-        /* Empty State */
-        <EmptyHabitsState onCreateClick={() => setIsCreateOpen(true)} />
       ) : (
-        /* Habits Content with Overview Summary */
-        <div className="space-y-8 flex-1">
-          {/* Dashboard Summary Cards */}
-          <DashboardSummaryCards 
-            dashboardSummary={dashboardSummary} 
-            globalActivity={globalActivity} 
-          />
-
-          {/* Habit List Toolbar */}
-          <div className="flex items-center justify-between mt-2">
-            <h2 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-              My Habits
-              <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-[#232936] text-xs font-mono text-zinc-500 dark:text-zinc-400">
-                {habits.length}
-              </span>
-            </h2>
-            <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-              {dashboardSummary.overallConsistency} consistency
-            </div>
-          </div>
-
-          {/* Habits Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {habits.map((habit) => (
-              <HabitCard
-                key={habit.id}
-                habit={habit}
-                checkins={checkinsByHabit[habit.id] || []}
-                onCheckin={handleCheckin}
-                onEdit={(h) => setEditingHabit(h)}
-                onDelete={(h) => setDeletingHabit(h)}
-                isCheckingIn={Boolean(checkinLoading[habit.id])}
-                reminder={remindersMap[habit.id] || null}
-                onReminderClick={handleReminderClick}
+        /* Habits Main Content Area - Always wraps habit section with canonical ID */
+        <div id="habits-section" className="space-y-8 flex-1 scroll-mt-20">
+          {habits.length === 0 ? (
+            /* Empty State */
+            <EmptyHabitsState onCreateClick={() => setIsCreateOpen(true)} />
+          ) : (
+            <>
+              {/* Dashboard Summary Cards */}
+              <DashboardSummaryCards
+                dashboardSummary={dashboardSummary}
+                globalActivity={globalActivity}
               />
-            ))}
-          </div>
+
+              {/* Habit List Toolbar */}
+              <div className="flex items-center justify-between mt-2">
+                <h2 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                  My Habits
+                  <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-[#232936] text-xs font-mono text-zinc-500 dark:text-zinc-400">
+                    {habits.length}
+                  </span>
+                </h2>
+                <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                  {dashboardSummary.overallConsistency} consistency
+                </div>
+              </div>
+
+              {/* Habits Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {habits.map((habit) => (
+                  <HabitCard
+                    key={habit.id}
+                    habit={habit}
+                    checkins={checkinsByHabit[habit.id] || []}
+                    onCheckin={handleCheckin}
+                    onEdit={(h) => setEditingHabit(h)}
+                    onDelete={(h) => setDeletingHabit(h)}
+                    isCheckingIn={Boolean(checkinLoading[habit.id])}
+                    reminder={remindersMap[habit.id] || null}
+                    onReminderClick={handleReminderClick}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
 

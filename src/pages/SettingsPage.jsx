@@ -1,63 +1,52 @@
 import { useState } from 'react';
-import { useSelector } from 'react-redux';
-import { getNotificationPreferences, saveNotificationPreferences } from '../utils/notifications/notificationPreferences';
-import { sendPasswordResetEmail } from '../services/authService';
-import { Bell, Shield, Loader2, CheckCircle2, AlertCircle, Smartphone } from 'lucide-react';
+import { useSelector, useDispatch } from 'react-redux';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  Shield,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  Smartphone,
+  User,
+  Moon,
+  Sun,
+  ShieldCheck,
+  FileText,
+  HelpCircle,
+  Info,
+  LogOut,
+  ChevronRight,
+} from 'lucide-react';
+import { sendPasswordResetEmail, signOut } from '../services/authService';
+import { clearAuth } from '../store/slices/authSlice';
+import { resetHabitsState } from '../store/slices/habitsSlice';
+import { toggleTheme } from '../store/slices/uiSlice';
+import { setActiveUserId } from '../utils/auth/sessionGuard';
+import { setNotificationUser } from '../utils/notifications/inAppNotificationStore';
+import { clearNotifiedStreakHabitIds } from '../utils/notifications/streakNotifier';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
-
-function ToggleSwitch({ label, checked, onChange, description }) {
-  return (
-    <div className="flex items-center justify-between py-5 border-b border-zinc-100 dark:border-zinc-800/80 last:border-0">
-      <div className="pr-4">
-        <label className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 cursor-pointer" onClick={() => onChange(!checked)}>
-          {label}
-        </label>
-        {description && (
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            {description}
-          </p>
-        )}
-      </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0D0F17] ${
-          checked ? 'bg-emerald-500' : 'bg-zinc-200 dark:bg-zinc-700'
-        }`}
-      >
-        <span className="sr-only">Toggle {label}</span>
-        <span
-          aria-hidden="true"
-          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-            checked ? 'translate-x-5' : 'translate-x-0'
-          }`}
-        />
-      </button>
-    </div>
-  );
-}
+import LegalModal from '../components/common/LegalModal';
 
 export default function SettingsPage() {
-  const [prefs, setPrefs] = useState(getNotificationPreferences());
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
-  
+  const theme = useSelector((state) => state.ui.theme);
+  const isDark = theme === 'dark';
+
   const [resetLoading, setResetLoading] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
   const [resetError, setResetError] = useState(null);
 
-  const { isInstallable, isInstalled, handleInstallClick } = useInstallPrompt();
+  const [logoutLoading, setLogoutLoading] = useState(false);
 
-  const handleToggle = (key, value) => {
-    const newPrefs = { ...prefs, [key]: value };
-    setPrefs(newPrefs);
-    saveNotificationPreferences(newPrefs);
-  };
+  const [legalModal, setLegalModal] = useState({ isOpen: false, type: 'privacy' });
+
+  const { isInstallable, isInstalled, handleInstallClick } = useInstallPrompt();
 
   const handlePasswordResetRequest = async () => {
     if (!user || !user.email) return;
-    
+
     try {
       setResetLoading(true);
       setResetError(null);
@@ -70,144 +59,296 @@ export default function SettingsPage() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      setLogoutLoading(true);
+      await signOut();
+      setActiveUserId(null);
+      setNotificationUser(null);
+      clearNotifiedStreakHabitIds();
+      dispatch(clearAuth());
+      dispatch(resetHabitsState());
+      navigate('/');
+    } catch (err) {
+      console.error('Logout failed:', err);
+    } finally {
+      setLogoutLoading(false);
+    }
+  };
+
+  const userInitial = (user?.email?.charAt(0) || 'U').toUpperCase();
+
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12 sm:py-20 animate-in fade-in duration-300 space-y-8">
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-16 animate-in fade-in duration-300 space-y-6">
+      {/* Page Title & Profile Header */}
       <div>
-        <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-white tracking-tight mb-3">
-          Settings
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 dark:text-white tracking-tight">
+          Profile &amp; Settings
         </h1>
-        <p className="text-zinc-500 dark:text-zinc-400 text-sm sm:text-base">
-          Manage your Quitmark preferences.
+        <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">
+          Manage your account, preferences, notifications, and data.
         </p>
       </div>
 
-      {/* Notifications Section */}
-      <div className="bg-white dark:bg-[#0D0F17] rounded-2xl border border-zinc-200 dark:border-zinc-800/80 p-5 sm:p-8 shadow-sm">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-            <Bell className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-zinc-900 dark:text-white">Notifications</h2>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Control when and how Quitmark alerts you.</p>
-          </div>
+      {/* Profile Card */}
+      <div className="bg-white dark:bg-[#0D0F17] rounded-2xl border border-zinc-200 dark:border-zinc-800/80 p-5 sm:p-6 shadow-sm flex items-center gap-4">
+        <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-white font-bold text-xl shadow-md shrink-0">
+          {userInitial}
         </div>
-
-        <div className="flex flex-col">
-          <ToggleSwitch
-            label="Streak Reminders"
-            description="Get notified if you're about to lose an active streak."
-            checked={prefs.streakReminders}
-            onChange={(val) => handleToggle('streakReminders', val)}
-          />
-          <ToggleSwitch
-            label="Morning"
-            description="Allow reminder notifications in the morning."
-            checked={prefs.morning}
-            onChange={(val) => handleToggle('morning', val)}
-          />
-          <ToggleSwitch
-            label="Afternoon"
-            description="Allow reminder notifications in the afternoon."
-            checked={prefs.afternoon}
-            onChange={(val) => handleToggle('afternoon', val)}
-          />
-          <ToggleSwitch
-            label="Evening"
-            description="Allow reminder notifications in the evening."
-            checked={prefs.evening}
-            onChange={(val) => handleToggle('evening', val)}
-          />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-bold text-zinc-900 dark:text-white truncate">
+              {user?.email?.split('@')[0] || 'Habit Builder'}
+            </h2>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              Active
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 truncate">
+            {user?.email || 'Logged in user'}
+          </p>
         </div>
       </div>
 
-      {/* Security Section */}
-      <div className="bg-white dark:bg-[#0D0F17] rounded-2xl border border-zinc-200 dark:border-zinc-800/80 p-5 sm:p-8 shadow-sm">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-full bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 flex items-center justify-center shrink-0">
-            <Shield className="w-5 h-5" />
+      {/* 1. Account Section */}
+      <div className="bg-white dark:bg-[#0D0F17] rounded-2xl border border-zinc-200 dark:border-zinc-800/80 p-5 sm:p-6 shadow-sm">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800/70 text-zinc-700 dark:text-zinc-300 flex items-center justify-center shrink-0">
+            <User className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-zinc-900 dark:text-white">Security</h2>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Manage your account security and password.</p>
+            <h3 className="text-base font-bold text-zinc-900 dark:text-white">Account</h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">Security and credentials</p>
           </div>
         </div>
 
-        <div className="py-2">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-4 pt-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-3 border-b border-zinc-100 dark:border-zinc-800/80">
             <div>
-              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Password Reset</h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm">
-                Receive an email containing a secure link to reset your account password.
+              <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Email Address</div>
+              <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mt-0.5">{user?.email}</div>
+            </div>
+            <span className="text-xs text-zinc-400 font-mono self-start sm:self-auto">Verified</span>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+            <div>
+              <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Password Reset</div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                Send a secure password reset link to your email.
               </p>
             </div>
-            
+
             {resetSuccess ? (
-              <div className="flex items-center gap-2 text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-4 py-2 rounded-lg border border-emerald-500/20">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Email Sent</span>
+              <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20 shrink-0">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Link Sent</span>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={handlePasswordResetRequest}
                 disabled={resetLoading}
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800/80 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold transition-all shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-50"
               >
-                {resetLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Sending...</span>
-                  </>
-                ) : (
-                  <span>Reset Password</span>
-                )}
+                {resetLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Shield className="w-3.5 h-3.5" />}
+                <span>Reset Password</span>
               </button>
             )}
           </div>
-          
+
           {resetError && (
-            <div className="mt-4 flex items-start gap-2.5 p-3 rounded-lg border border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400 text-xs">
-              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs">
+              <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{resetError}</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* App Experience Section */}
-      {(!isInstalled && isInstallable) && (
-        <div className="bg-white dark:bg-[#0D0F17] rounded-2xl border border-zinc-200 dark:border-zinc-800/80 p-5 sm:p-8 shadow-sm">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-              <Smartphone className="w-5 h-5" />
+      {/* 2. Appearance Section */}
+      <div className="bg-white dark:bg-[#0D0F17] rounded-2xl border border-zinc-200 dark:border-zinc-800/80 p-5 sm:p-6 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+              {isDark ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
             </div>
             <div>
-              <h2 className="text-xl font-bold text-zinc-900 dark:text-white">App Experience</h2>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Install Quitmark for a better, app-like experience.</p>
+              <h3 className="text-base font-bold text-zinc-900 dark:text-white">Appearance</h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Current theme: <span className="font-semibold capitalize">{theme}</span> mode
+              </p>
             </div>
           </div>
 
-          <div className="py-2">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Add to Home Screen</h3>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm">
-                  Install Quitmark on your device for quick access and offline support.
-                </p>
+          <button
+            type="button"
+            onClick={() => dispatch(toggleTheme())}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+          >
+            {isDark ? (
+              <>
+                <Sun className="w-3.5 h-3.5 text-amber-500" />
+                <span>Switch to Light</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-3.5 h-3.5 text-indigo-500" />
+                <span>Switch to Dark</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+
+
+      {/* 6. Privacy & 7. Terms Section */}
+      <div className="bg-white dark:bg-[#0D0F17] rounded-2xl border border-zinc-200 dark:border-zinc-800/80 p-5 sm:p-6 shadow-sm space-y-1">
+        <button
+          type="button"
+          onClick={() => setLegalModal({ isOpen: true, type: 'privacy' })}
+          className="w-full flex items-center justify-between py-3 px-2 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-900/60 transition-colors text-left"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Privacy Policy</span>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">Zero data selling &amp; end-to-end security</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-zinc-400" />
+        </button>
+
+        <div className="h-px bg-zinc-100 dark:bg-zinc-800/80" />
+
+        <button
+          type="button"
+          onClick={() => setLegalModal({ isOpen: true, type: 'terms' })}
+          className="w-full flex items-center justify-between py-3 px-2 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-900/60 transition-colors text-left"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <FileText className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Terms of Service</span>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">Personal productivity &amp; usage terms</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-zinc-400" />
+        </button>
+      </div>
+
+      {/* 8. Help & Support */}
+      <div className="bg-white dark:bg-[#0D0F17] rounded-2xl border border-zinc-200 dark:border-zinc-800/80 p-5 sm:p-6 shadow-sm space-y-1">
+        <Link
+          to="/faq"
+          className="flex items-center justify-between py-3 px-2 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-900/60 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <HelpCircle className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">FAQ</span>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">Frequently asked questions &amp; streak rules</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-zinc-400" />
+        </Link>
+
+        <div className="h-px bg-zinc-100 dark:bg-zinc-800/80" />
+
+        <Link
+          to="/report-bug"
+          className="flex items-center justify-between py-3 px-2 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-900/60 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+              <AlertCircle className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Help &amp; Support / Bug Report</span>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">Submit feedback or report an unexpected issue</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-zinc-400" />
+        </Link>
+      </div>
+
+      {/* 9. About Habit Tracker & App Experience */}
+      <div className="bg-white dark:bg-[#0D0F17] rounded-2xl border border-zinc-200 dark:border-zinc-800/80 p-5 sm:p-6 shadow-sm">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            <Info className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-zinc-900 dark:text-white">About Habit Tracker</h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">Build better habits, one day at a time</p>
+          </div>
+        </div>
+
+        <div className="space-y-3 pt-1 text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+          <div className="flex items-center justify-between py-2 border-b border-zinc-100 dark:border-zinc-800/80">
+            <span>Version</span>
+            <span className="font-mono font-semibold text-zinc-900 dark:text-zinc-100">v1.2.0</span>
+          </div>
+          <div className="flex items-center justify-between py-2 border-b border-zinc-100 dark:border-zinc-800/80">
+            <span>Platform</span>
+            <span className="font-semibold text-zinc-900 dark:text-zinc-100">Web &bull; PWA &bull; Android</span>
+          </div>
+          <div className="flex items-center justify-between py-2">
+            <span>Built by</span>
+            <a
+              href="https://khustarhussain.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+            >
+              Khustar Hussain
+            </a>
+          </div>
+
+          {!isInstalled && isInstallable && (
+            <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <Smartphone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span className="font-semibold text-zinc-900 dark:text-zinc-100">Install Mobile App</span>
               </div>
-              
               <button
                 type="button"
                 onClick={handleInstallClick}
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500/40 shadow-sm shadow-emerald-600/20"
+                className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors"
               >
-                <span>Install Quitmark</span>
+                Install
               </button>
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
+
+      {/* 10. Logout Section */}
+      <div className="pt-2">
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={logoutLoading}
+          className="w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 font-bold text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:opacity-50"
+        >
+          {logoutLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
+          <span>Logout</span>
+        </button>
+      </div>
+
+      {/* Legal Dialog */}
+      <LegalModal
+        isOpen={legalModal.isOpen}
+        onClose={() => setLegalModal((prev) => ({ ...prev, isOpen: false }))}
+        type={legalModal.type}
+      />
     </div>
   );
 }

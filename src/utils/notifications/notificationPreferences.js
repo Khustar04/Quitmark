@@ -1,4 +1,11 @@
-const PREFS_KEY = 'quitmark_notification_prefs';
+import { getActiveUserId } from '../auth/sessionGuard';
+
+const PREFS_KEY_BASE = 'quitmark_notification_prefs';
+
+const getPrefsKey = (userId) => {
+  const uid = userId || getActiveUserId();
+  return uid ? `${PREFS_KEY_BASE}_${uid}` : PREFS_KEY_BASE;
+};
 
 const defaultPreferences = {
   enabled: false,
@@ -8,28 +15,35 @@ const defaultPreferences = {
   evening: true,
 };
 
-export const getNotificationPreferences = () => {
+export const getNotificationPreferences = (userId = null) => {
   if (typeof window === 'undefined') return defaultPreferences;
-  
+
   try {
-    const stored = localStorage.getItem(PREFS_KEY);
+    const key = getPrefsKey(userId);
+    let stored = localStorage.getItem(key);
+    // If not found in user-scoped key, check legacy shared key as fallback
+    if (!stored && key !== PREFS_KEY_BASE) {
+      stored = localStorage.getItem(PREFS_KEY_BASE);
+    }
+
     if (stored) {
       return { ...defaultPreferences, ...JSON.parse(stored) };
     }
   } catch (error) {
     console.error('Failed to parse notification preferences', error);
   }
-  
+
   return defaultPreferences;
 };
 
-export const saveNotificationPreferences = (newPrefs) => {
+export const saveNotificationPreferences = (newPrefs, userId = null) => {
   if (typeof window === 'undefined') return;
-  
+
   try {
-    const current = getNotificationPreferences();
+    const key = getPrefsKey(userId);
+    const current = getNotificationPreferences(userId);
     const updated = { ...current, ...newPrefs };
-    localStorage.setItem(PREFS_KEY, JSON.stringify(updated));
+    localStorage.setItem(key, JSON.stringify(updated));
   } catch (error) {
     console.error('Failed to save notification preferences', error);
   }

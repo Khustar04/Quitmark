@@ -13,7 +13,9 @@ export default function DashboardSummaryCards({ dashboardSummary, globalActivity
           <span className="text-3xl font-bold text-zinc-900 dark:text-white">
             {dashboardSummary.bestCurrentStreak}
           </span>
-          <span className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">days</span>
+          <span className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">
+            {dashboardSummary.bestCurrentStreak === 1 ? 'day' : 'days'}
+          </span>
         </div>
       </div>
 
@@ -27,7 +29,9 @@ export default function DashboardSummaryCards({ dashboardSummary, globalActivity
           <span className="text-3xl font-bold text-zinc-900 dark:text-white">
             {dashboardSummary.totalCompleted}
           </span>
-          <span className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">check-ins</span>
+          <span className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">
+            {dashboardSummary.totalCompleted === 1 ? 'check-in' : 'check-ins'}
+          </span>
         </div>
       </div>
 

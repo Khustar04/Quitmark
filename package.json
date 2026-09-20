@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "cap:build": "npm run build && npx cap sync",
     "cap:sync": "npx cap sync",
-    "cap:open": "npx cap open android"
+    "cap:open": "npx cap open android",
+    "test": "node --loader ./tests/loader.js --test tests/*.test.js"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",

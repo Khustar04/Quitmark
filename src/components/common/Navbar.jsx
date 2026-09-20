@@ -3,17 +3,50 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { Menu, X, LogOut, LayoutDashboard, User, Settings, Trophy } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
-import NotificationToggle from './NotificationToggle';
+import NotificationBellPopover from './NotificationBellPopover';
 import { signOut } from '../../services/authService';
 import { clearAuth } from '../../store/slices/authSlice';
 import { resetHabitsState } from '../../store/slices/habitsSlice';
+import { setActiveUserId } from '../../utils/auth/sessionGuard';
+import { setNotificationUser } from '../../utils/notifications/inAppNotificationStore';
+import { clearNotifiedStreakHabitIds } from '../../utils/notifications/streakNotifier';
+import { isNativeApp } from '../../utils/notifications/nativeReminderService';
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
+
+  // Close both menus when route changes
+  const [prevPathname, setPrevPathname] = useState(location.pathname);
+  if (prevPathname !== location.pathname) {
+    setPrevPathname(location.pathname);
+    if (mobileMenuOpen) setMobileMenuOpen(false);
+    if (notificationOpen) setNotificationOpen(false);
+  }
+
+  const handleToggleNotification = () => {
+    setNotificationOpen((prev) => {
+      const next = !prev;
+      if (next) setMobileMenuOpen(false); // Close mobile drawer when popover opens
+      return next;
+    });
+  };
+
+  const handleCloseNotification = () => {
+    setNotificationOpen(false);
+  };
+
+  const handleToggleMobileMenu = () => {
+    setMobileMenuOpen((prev) => {
+      const next = !prev;
+      if (next) setNotificationOpen(false); // Close notification popover when mobile drawer opens
+      return next;
+    });
+  };
 
   const handleHowItWorksClick = (e) => {
     if (location.pathname === '/') {
@@ -29,17 +62,30 @@ export default function Navbar() {
   const handleLogout = async () => {
     try {
       await signOut();
+      setActiveUserId(null);
+      setNotificationUser(null);
+      clearNotifiedStreakHabitIds();
       dispatch(clearAuth());
       dispatch(resetHabitsState());
       setMobileMenuOpen(false);
+      setNotificationOpen(false);
       navigate('/login');
     } catch (err) {
       console.error('Logout error:', err);
     }
   };
 
+  const isNative = isNativeApp();
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-zinc-200 dark:border-white/10 bg-white/95 dark:bg-zinc-900/60 backdrop-blur-md transition-all shadow-sm dark:shadow-[0_4px_30px_rgba(0,0,0,0.2)] transform-gpu">
+    <header
+      style={{
+        paddingTop: isNative
+          ? 'max(env(safe-area-inset-top, 0px), 28px)'
+          : 'max(env(safe-area-inset-top, 0px), 0px)',
+      }}
+      className="sticky top-0 z-50 w-full border-b border-zinc-200 dark:border-white/10 bg-white/95 dark:bg-zinc-900/60 backdrop-blur-md transition-all shadow-sm dark:shadow-[0_4px_30px_rgba(0,0,0,0.2)] transform-gpu"
+    >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Brand Logo - Links to /dashboard when authenticated, / when unauthenticated */}
         <Link
@@ -83,7 +129,11 @@ export default function Navbar() {
                 <span>Leaderboard</span>
               </Link>
 
-              <NotificationToggle />
+              <NotificationBellPopover
+                isOpen={notificationOpen}
+                onToggle={handleToggleNotification}
+                onClose={handleCloseNotification}
+              />
               <ThemeToggle />
 
               {/* Profile Display */}
@@ -157,114 +207,55 @@ export default function Navbar() {
 
         {/* Mobile Actions & Menu Toggle */}
         <div className="flex md:hidden items-center gap-2">
-          {user && <NotificationToggle />}
+          {user && (
+            <NotificationBellPopover
+              isOpen={notificationOpen}
+              onToggle={handleToggleNotification}
+              onClose={handleCloseNotification}
+            />
+          )}
           <ThemeToggle />
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen((prev) => !prev)}
-            className="p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
-            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-            aria-expanded={mobileMenuOpen}
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+          {/* Mobile Menu Button (Only for unauthenticated users; authenticated mobile users use MobileBottomNav) */}
+          {!user && (
+            <button
+              type="button"
+              onClick={handleToggleMobileMenu}
+              className="p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Mobile Drawer */}
-      {mobileMenuOpen && (
+      {/* Mobile Drawer (Only for unauthenticated users: How it Works + Login + Get Started) */}
+      {!user && mobileMenuOpen && (
         <div className="md:hidden border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-4 py-4 space-y-3 animate-in fade-in duration-150">
-          {user ? (
-            /* Authenticated Mobile Drawer: Profile Row + Dashboard + Logout (NO "How it works", NO public links) */
-            <>
-              <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800">
-                <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 flex-shrink-0">
-                  <User className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-zinc-400 dark:text-zinc-500 truncate">Account</p>
-                  <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">
-                    {user.email || 'User'}
-                  </p>
-                </div>
-              </div>
+          <a
+            href="/#how-it-works"
+            onClick={handleHowItWorksClick}
+            className="block px-3 py-2.5 rounded-md text-sm font-medium min-h-[44px] text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+          >
+            How it Works
+          </a>
 
-              <Link
-                to="/dashboard"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium min-h-[44px] transition-colors ${
-                  location.pathname === '/dashboard'
-                    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold'
-                    : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900'
-                }`}
-              >
-                <LayoutDashboard className="w-4 h-4" />
-                <span>Dashboard</span>
-              </Link>
+          <Link
+            to="/login"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block px-3 py-2.5 rounded-md text-sm font-medium min-h-[44px] text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+          >
+            Login
+          </Link>
 
-              <Link
-                to="/leaderboard"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium min-h-[44px] transition-colors ${
-                  location.pathname === '/leaderboard'
-                    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold'
-                    : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900'
-                }`}
-              >
-                <Trophy className="w-4 h-4" />
-                <span>Leaderboard</span>
-              </Link>
-              
-              <Link
-                to="/settings"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium min-h-[44px] transition-colors ${
-                  location.pathname === '/settings'
-                    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold'
-                    : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900'
-                }`}
-              >
-                <Settings className="w-4 h-4" />
-                <span>Settings</span>
-              </Link>
-
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="flex items-center gap-2.5 w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium min-h-[44px] text-rose-500 hover:bg-rose-500/10 dark:hover:bg-rose-500/10 transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Logout</span>
-              </button>
-            </>
-          ) : (
-            /* Unauthenticated Mobile Drawer: How it Works + Login + Get Started */
-            <>
-              <a
-                href="/#how-it-works"
-                onClick={handleHowItWorksClick}
-                className="block px-3 py-2.5 rounded-md text-sm font-medium min-h-[44px] text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-              >
-                How it Works
-              </a>
-
-              <Link
-                to="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2.5 rounded-md text-sm font-medium min-h-[44px] text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-              >
-                Login
-              </Link>
-
-              <Link
-                to="/signup"
-                onClick={() => setMobileMenuOpen(false)}
-                className="w-full text-center px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium shadow-sm min-h-[44px] flex items-center justify-center"
-              >
-                Get Started
-              </Link>
-            </>
-          )}
+          <Link
+            to="/signup"
+            onClick={() => setMobileMenuOpen(false)}
+            className="w-full text-center px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium shadow-sm min-h-[44px] flex items-center justify-center"
+          >
+            Get Started
+          </Link>
         </div>
       )}
     </header>

@@ -6,13 +6,35 @@
 
 import { savePushSubscription, deletePushSubscription } from '../../services/reminderService';
 
-const SERVICE_WORKER_READY_TIMEOUT_MS = 5000;
+const SERVICE_WORKER_READY_TIMEOUT_MS = 2000;
 
 /**
  * Resolves the active service worker registration, but never waits forever.
  * In Vite development and during a first PWA install, `ready` may not resolve.
  */
 const getReadyServiceWorker = async () => {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+    throw new Error('Service workers not supported.');
+  }
+
+  // Fast path: if registration is already active, return immediately without waiting
+  try {
+    const existing = await navigator.serviceWorker.getRegistration();
+    if (existing && existing.active) {
+      return existing;
+    }
+    // If no service worker registration exists at all in the browser (e.g. dev mode or not yet installed),
+    // exit immediately rather than waiting for a ready promise that will never resolve
+    if (!existing) {
+      throw new Error('Service worker is not registered.');
+    }
+  } catch (err) {
+    if (err.message === 'Service worker is not registered.') {
+      throw err;
+    }
+    // Proceed to ready promise for installing/waiting service workers
+  }
+
   const readyPromise = navigator.serviceWorker.ready;
   const timeoutPromise = new Promise((_, reject) => {
     setTimeout(
@@ -99,7 +121,17 @@ export const subscribeToPush = async () => {
 
     return subscription;
   } catch (error) {
-    console.error('[Quitmark] Failed to subscribe to push notifications:', error);
+    const isServiceWorkerInactive =
+      error.message?.includes('not registered') ||
+      error.message?.includes('not ready') ||
+      error.message?.includes('not supported') ||
+      import.meta.env?.DEV;
+
+    if (isServiceWorkerInactive) {
+      console.info('[Quitmark] Push notifications skipped (service worker not active):', error.message);
+    } else {
+      console.error('[Quitmark] Failed to subscribe to push notifications:', error);
+    }
     return null;
   }
 };
@@ -125,7 +157,15 @@ export const unsubscribeFromPush = async () => {
       }
     }
   } catch (error) {
-    console.error('[Quitmark] Failed to unsubscribe from push:', error);
+    if (
+      import.meta.env?.DEV ||
+      error.message?.includes('not registered') ||
+      error.message?.includes('not ready')
+    ) {
+      console.info('[Quitmark] Push unsubscription skipped (service worker not active):', error.message);
+    } else {
+      console.error('[Quitmark] Failed to unsubscribe from push:', error);
+    }
   }
 };
 

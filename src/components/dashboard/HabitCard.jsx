@@ -152,7 +152,7 @@ export default function HabitCard({
             </span>
           </div>
           <div className="text-xs font-mono text-zinc-500 dark:text-zinc-400">
-            Best: {longestStreak} days
+            Best: {longestStreak} {longestStreak === 1 ? 'day' : 'days'}
           </div>
         </div>
       </div>

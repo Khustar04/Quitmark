@@ -23,7 +23,7 @@ export default function ReportBugPage() {
     const body = encodeURIComponent(`Category: ${categoryLabel}\n\nDetails:\n${details || 'No additional details provided.'}\n\n--- \nPlease do not remove the information above.`);
     
     // Trigger default mail client
-    window.location.href = `mailto:support@quitmark.com?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:khustarhussain8@gmail.com?subject=${subject}&body=${body}`;
     
     setSubmitted(true);
     

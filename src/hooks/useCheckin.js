@@ -10,6 +10,7 @@ import {
   setError,
 } from '../store/slices/habitsSlice';
 import { isActiveUser } from '../utils/auth/sessionGuard';
+import { isNativeApp, cancelNativeHabitReminder } from '../utils/notifications/nativeReminderService';
 
 export function useCheckin() {
   const dispatch = useDispatch();
@@ -52,6 +53,11 @@ export function useCheckin() {
       // Synchronize exact server payload
       if (status !== 'pending') {
         dispatch(setHabitCheckinOptimistic({ habitId, checkin: saved }));
+      }
+
+      // Stop remainder of reminder cycle for today on native device
+      if (status === 'completed' && isNativeApp()) {
+        void cancelNativeHabitReminder(habitId);
       }
     } catch (err) {
       if (!isActiveUser(userId)) return;

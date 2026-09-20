@@ -19,11 +19,16 @@ const notifiedHabitIds = new Set();
  * @param {Array} habits - List of user habit objects
  * @param {Object} checkinsByHabit - Map of habitId -> array of check-in records
  */
+export const clearNotifiedStreakHabitIds = () => {
+  notifiedHabitIds.clear();
+};
+
 export const checkAndNotifyStreakRisks = async (habits = [], checkinsByHabit = {}) => {
   if (typeof window === 'undefined' || !('Notification' in window)) return;
   if (getNotificationPermission() !== 'granted') return;
   
-  const prefs = getNotificationPreferences();
+  const userId = habits[0]?.user_id || null;
+  const prefs = getNotificationPreferences(userId);
   if (!prefs.enabled || !prefs.streakReminders) return;
 
   for (const habit of habits) {
@@ -41,6 +46,8 @@ export const checkAndNotifyStreakRisks = async (habits = [], checkinsByHabit = {
       try {
         const sent = await sendNotification(`Habit: ${habit.name}`, {
           body: '🔥 Your streak is at risk. Check in today to keep it alive.',
+          type: 'streak',
+          userId: habit.user_id || userId,
         });
         
         if (sent) notifiedHabitIds.add(habit.id);

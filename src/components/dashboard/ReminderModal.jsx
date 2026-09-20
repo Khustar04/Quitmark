@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Bell, BellOff, Trash2, Loader2, AlertCircle, Clock } from 'lucide-react';
+import { X, Bell, Trash2, Loader2, AlertCircle, Clock } from 'lucide-react';
 import gsap from 'gsap';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -39,9 +39,6 @@ export default function ReminderModal({
   );
   const [repeatDays, setRepeatDays] = useState(() =>
     reminder?.repeat_days || [1, 2, 3, 4, 5]
-  );
-  const [enabled, setEnabled] = useState(() =>
-    reminder ? reminder.enabled !== false : true
   );
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -105,7 +102,7 @@ export default function ReminderModal({
       setSubmitting(true);
       setError(null);
       await onSave({
-        enabled,
+        enabled: true,
         reminderTime: to24HourTime(hour, minute, period),
         repeatType,
         repeatDays: repeatType === 'SELECTED_DAYS' ? repeatDays : null,
@@ -181,38 +178,6 @@ export default function ReminderModal({
         )}
 
         <div className="mt-5 space-y-5">
-          {/* Enable/Disable Toggle */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {enabled ? (
-                <Bell className="w-4 h-4 text-emerald-500" />
-              ) : (
-                <BellOff className="w-4 h-4 text-zinc-400" />
-              )}
-              <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                {enabled ? 'Reminder On' : 'Reminder Off'}
-              </span>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={enabled}
-              onClick={() => setEnabled(!enabled)}
-              disabled={submitting}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0D0F17] ${
-                enabled ? 'bg-emerald-500' : 'bg-zinc-200 dark:bg-zinc-700'
-              }`}
-            >
-              <span className="sr-only">Toggle reminder</span>
-              <span
-                aria-hidden="true"
-                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                  enabled ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-
           {/* Time Picker */}
           <div>
             <span className="flex items-center gap-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
@@ -263,7 +228,7 @@ export default function ReminderModal({
               </div>
             </div>
             <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-              Reminder will be sent at {hour}:{minute} {period}.
+              Automatic reminders will notify you at {hour}:{minute} {period}, with a 60-min follow-up and streak protection alert if still incomplete.
             </p>
           </div>
 

@@ -1,3 +1,5 @@
+import { addInAppNotification } from './inAppNotificationStore';
+
 /**
  * Notification Permission Utility for Quitmark.
  * Handles checking and requesting browser notification permissions.
@@ -35,6 +37,19 @@ export const requestNotificationPermission = async () => {
 };
 
 export const sendNotification = async (title, options = {}) => {
+  // Always log to in-app notification inbox
+  try {
+    addInAppNotification({
+      title,
+      body: options.body || '',
+      type: options.type || 'reminder',
+      url: options.data?.url || options.url || null,
+      userId: options.userId || null,
+    });
+  } catch (storeErr) {
+    console.warn('[Quitmark] Could not record to in-app notification store:', storeErr);
+  }
+
   if (!isNotificationSupported() || Notification.permission !== 'granted') {
     return false;
   }

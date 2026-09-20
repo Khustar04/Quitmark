@@ -6,6 +6,8 @@ import { setAuth, clearAuth } from './store/slices/authSlice';
 import { resetHabitsState } from './store/slices/habitsSlice';
 import { syncUserTimezone } from './services/authService';
 import { setActiveUserId } from './utils/auth/sessionGuard';
+import { setNotificationUser } from './utils/notifications/inAppNotificationStore';
+import { clearNotifiedStreakHabitIds } from './utils/notifications/streakNotifier';
 import { unsubscribeFromPush } from './utils/notifications/pushSubscription';
 import { App as CapApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
@@ -39,6 +41,8 @@ export default function App() {
     const clearUserState = () => {
       activeUserIdRef.current = null;
       setActiveUserId(null);
+      setNotificationUser(null);
+      clearNotifiedStreakHabitIds();
       dispatch(clearAuth());
       dispatch(resetHabitsState());
       // Clean up push subscription on logout
@@ -53,9 +57,11 @@ export default function App() {
 
       if (activeUserIdRef.current && activeUserIdRef.current !== user.id) {
         dispatch(resetHabitsState());
+        clearNotifiedStreakHabitIds();
       }
       activeUserIdRef.current = user.id;
       setActiveUserId(user.id);
+      setNotificationUser(user.id);
       dispatch(setAuth({ user, session }));
       void syncUserTimezone();
     };

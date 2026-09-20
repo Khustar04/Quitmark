@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { getSmartReminderSchedule, getReminderMessage, REMINDER_RULES } from '../../constants/reminderRules';
 
 export const HABIT_CHANNEL_ID = 'habit-reminders';
 
@@ -41,6 +42,20 @@ export const ensureNotificationChannel = async () => {
     });
   } catch (err) {
     console.warn('[Quitmark] Failed to create notification channel:', err);
+  }
+};
+
+/**
+ * Checks if notification permission is already granted on native Android/iOS system.
+ */
+export const checkNativeNotificationPermission = async () => {
+  if (!isNativeApp()) return false;
+  try {
+    const check = await LocalNotifications.checkPermissions();
+    return check.display === 'granted';
+  } catch (error) {
+    console.warn('[Quitmark] Native permission check failed:', error);
+    return false;
   }
 };
 
@@ -91,10 +106,12 @@ const getNextOccurrenceDate = (hour, minute, dayOfWeek = null) => {
 };
 
 /**
- * Schedules a local notification for a habit on the native device.
- * Uses exact trigger time + Android AlarmManager so it rings even when app is closed.
+ * Schedules smart reminders for a habit on the native device:
+ * 1. Initial reminder at scheduled time
+ * 2. Follow-up reminder 60m later
+ * 3. Streak protection reminder before day ends (if active streak exists)
  */
-export const scheduleNativeHabitReminder = async (habitId, habitName, config) => {
+export const scheduleNativeHabitReminder = async (habitId, habitName, config, options = {}) => {
   if (!isNativeApp()) return;
 
   // Always ensure channel exists before scheduling
@@ -107,63 +124,52 @@ export const scheduleNativeHabitReminder = async (habitId, habitName, config) =>
     return;
   }
 
-  const [rawHour = '07', rawMinute = '00'] = config.reminderTime.split(':');
-  const hour = parseInt(rawHour, 10);
-  const minute = parseInt(rawMinute, 10);
-
   const granted = await requestNativeNotificationPermission();
   if (!granted) {
     console.warn('[Quitmark] Native notification permission not granted.');
     return;
   }
 
+  const smartSchedule = getSmartReminderSchedule(config.reminderTime);
   const baseId = stringToId(habitId);
-  const title = 'Quitmark Reminder';
-  const body = `Time to check in: ${habitName || 'your habit'}! Keep your streak alive 🔥`;
+  const isSelectedDays = config.repeatType === 'SELECTED_DAYS' && Array.isArray(config.repeatDays) && config.repeatDays.length > 0;
+  const daysList = isSelectedDays ? config.repeatDays : [null];
 
-  try {
-    if (config.repeatType === 'SELECTED_DAYS' && Array.isArray(config.repeatDays) && config.repeatDays.length > 0) {
-      const notifications = config.repeatDays.map((dayIdx, index) => {
-        const nextDate = getNextOccurrenceDate(hour, minute, dayIdx);
-        return {
-          id: baseId + index,
-          title,
-          body,
-          channelId: HABIT_CHANNEL_ID,
-          schedule: {
-            at: nextDate,
-            repeats: true,
-            every: 'week',
-            allowWhileIdle: true,
-          },
-          extra: { habitId },
-        };
+  const notifications = [];
+
+  daysList.forEach((dayIdx, dayOffset) => {
+    smartSchedule.schedule.forEach((stage, stageIdx) => {
+      // If streak protection, verify active streak exists (default true unless explicitly false)
+      if (stage.type === REMINDER_RULES.REMINDER_TYPES.STREAK_PROTECTION && options.hasActiveStreak === false) {
+        return;
+      }
+
+      const nextDate = getNextOccurrenceDate(stage.hour, stage.minute, dayIdx);
+      const msg = getReminderMessage(stage.type, habitName, stageIdx + (dayIdx || 0));
+      const notifId = baseId + (dayOffset * 10) + stageIdx;
+
+      notifications.push({
+        id: notifId,
+        title: msg.title,
+        body: msg.body,
+        channelId: HABIT_CHANNEL_ID,
+        schedule: {
+          at: nextDate,
+          repeats: true,
+          every: isSelectedDays ? 'week' : 'day',
+          allowWhileIdle: true,
+        },
+        extra: { habitId, stageType: stage.type },
       });
+    });
+  });
 
+  if (notifications.length > 0) {
+    try {
       await LocalNotifications.schedule({ notifications });
-    } else {
-      // Daily repeat
-      const nextDate = getNextOccurrenceDate(hour, minute);
-      await LocalNotifications.schedule({
-        notifications: [
-          {
-            id: baseId,
-            title,
-            body,
-            channelId: HABIT_CHANNEL_ID,
-            schedule: {
-              at: nextDate,
-              repeats: true,
-              every: 'day',
-              allowWhileIdle: true,
-            },
-            extra: { habitId },
-          },
-        ],
-      });
+    } catch (error) {
+      console.error('[Quitmark] Failed to schedule native smart reminders:', error);
     }
-  } catch (error) {
-    console.error('[Quitmark] Failed to schedule native notification:', error);
   }
 };
 
@@ -174,7 +180,8 @@ export const cancelNativeHabitReminder = async (habitId) => {
   if (!isNativeApp()) return;
   try {
     const baseId = stringToId(habitId);
-    const idsToCancel = Array.from({ length: 8 }, (_, i) => ({ id: baseId + i }));
+    // Cover all day offsets (0-7) and stage offsets (0-9)
+    const idsToCancel = Array.from({ length: 80 }, (_, i) => ({ id: baseId + i }));
     await LocalNotifications.cancel({ notifications: idsToCancel });
   } catch (error) {
     console.warn('[Quitmark] Failed to cancel native notification:', error);
@@ -183,14 +190,21 @@ export const cancelNativeHabitReminder = async (habitId) => {
 
 /**
  * Synchronizes all habit reminders with native Android alarms.
+ * Skips scheduling for habits already completed today.
  */
-export const syncAllNativeHabitReminders = async (habits, remindersMap) => {
+export const syncAllNativeHabitReminders = async (habits, remindersMap, checkinsByHabit = {}) => {
   if (!isNativeApp() || !Array.isArray(habits)) return;
   try {
     await ensureNotificationChannel();
+    const todayStr = new Date().toISOString().slice(0, 10);
+
     for (const habit of habits) {
       const reminder = remindersMap[habit.id];
-      if (reminder && reminder.enabled) {
+      const checkins = checkinsByHabit[habit.id] || [];
+      const todayCheckin = checkins.find((c) => c.check_in_date && c.check_in_date.startsWith(todayStr));
+      const isCompletedToday = todayCheckin?.status === 'completed';
+
+      if (reminder && reminder.enabled && !isCompletedToday) {
         await scheduleNativeHabitReminder(habit.id, habit.name, {
           enabled: true,
           reminderTime: reminder.reminder_time,
