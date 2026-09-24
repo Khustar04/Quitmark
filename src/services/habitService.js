@@ -156,7 +156,9 @@ export const removeStoredHabitCategory = (userId, habitId) => {
     const map = getStoredHabitCategories(userId);
     delete map[habitId];
     localStorage.setItem(`${CATEGORY_STORAGE_PREFIX}${userId}`, JSON.stringify(map));
-  } catch {}
+  } catch (err) {
+    console.warn('[Quitmark] Failed to remove stored category:', err);
+  }
 };
 
 /**
