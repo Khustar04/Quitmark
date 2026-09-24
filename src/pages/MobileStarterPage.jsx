@@ -105,6 +105,20 @@ export default function MobileStarterPage() {
     }
   }, [initialized, user, navigate]);
 
+  // Handle hardware / gesture back button while traversing onboarding slides
+  useEffect(() => {
+    window.__quitmark_step_back = () => {
+      if (step > 1) {
+        setStep((s) => s - 1);
+        return true;
+      }
+      return false;
+    };
+    return () => {
+      delete window.__quitmark_step_back;
+    };
+  }, [step]);
+
   const handleNext = () => {
     if (step === 4) {
       setOnboardingCompleted();
@@ -198,7 +212,7 @@ export default function MobileStarterPage() {
           <button
             type="button"
             onClick={handleBack}
-            className="w-10 h-10 rounded-full border border-slate-200/80 bg-white/80 backdrop-blur-xs shadow-xs hover:bg-white active:scale-95 text-slate-700 flex items-center justify-center transition-all cursor-pointer"
+            className="w-10 h-10 rounded-full border border-slate-200/80 bg-white/80 backdrop-blur-sm shadow-sm hover:bg-white active:scale-95 text-slate-700 flex items-center justify-center transition-all cursor-pointer"
             aria-label="Go back to tour"
           >
             <ChevronLeft className="w-5 h-5 stroke-[2.2]" />
@@ -289,7 +303,7 @@ export default function MobileStarterPage() {
                       <div className="text-[11px] text-slate-400 font-medium">Daily</div>
                     </div>
                   </div>
-                  <div className="w-6 h-6 rounded-full bg-[#15803d] text-white flex items-center justify-center shadow-xs">
+                  <div className="w-6 h-6 rounded-full bg-[#15803d] text-white flex items-center justify-center shadow-sm">
                     <Check className="w-3.5 h-3.5 stroke-[3]" />
                   </div>
                 </div>
@@ -319,7 +333,7 @@ export default function MobileStarterPage() {
                       <div className="text-[11px] text-slate-400 font-medium">Daily</div>
                     </div>
                   </div>
-                  <div className="w-6 h-6 rounded-full bg-[#15803d] text-white flex items-center justify-center shadow-xs">
+                  <div className="w-6 h-6 rounded-full bg-[#15803d] text-white flex items-center justify-center shadow-sm">
                     <Check className="w-3.5 h-3.5 stroke-[3]" />
                   </div>
                 </div>
@@ -379,7 +393,7 @@ export default function MobileStarterPage() {
                       <div
                         className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${
                           isChecked
-                            ? 'bg-[#15803d] text-white shadow-xs'
+                            ? 'bg-[#15803d] text-white shadow-sm'
                             : 'border border-slate-200 bg-slate-50'
                         }`}
                       >
@@ -618,7 +632,7 @@ export default function MobileStarterPage() {
                 type="button"
                 onClick={handleBack}
                 aria-label="Go back"
-                className="w-13 h-13 rounded-full border border-slate-200 bg-white shadow-sm hover:bg-slate-50 active:scale-95 text-slate-700 flex items-center justify-center transition-all cursor-pointer shrink-0"
+                className="w-12 h-12 rounded-full border border-slate-200 bg-white shadow-sm hover:bg-slate-50 active:scale-95 text-slate-700 flex items-center justify-center transition-all cursor-pointer shrink-0"
               >
                 <ChevronLeft className="w-6 h-6 stroke-[2.2]" />
               </button>

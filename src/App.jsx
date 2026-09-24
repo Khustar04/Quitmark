@@ -160,7 +160,15 @@ export default function App() {
     if (Capacitor.isNativePlatform()) {
       backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
         const currentPath = window.location.pathname;
-        if (currentPath === '/dashboard' || currentPath === '/' || currentPath === '/login' || !canGoBack) {
+        if (currentPath === '/') {
+          if (typeof window.__quitmark_step_back === 'function') {
+            const handled = window.__quitmark_step_back();
+            if (handled) return;
+          }
+          CapApp.exitApp();
+          return;
+        }
+        if (currentPath === '/dashboard' || currentPath === '/login' || !canGoBack) {
           CapApp.exitApp();
         } else {
           window.history.back();

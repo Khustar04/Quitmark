@@ -21,7 +21,8 @@ export default function RootLayout() {
   }, [location.pathname, location.hash]);
 
   const isAuth = Boolean(user);
-  const isMobileStarter = isMobileApp() && location.pathname === '/' && !isAuth;
+  const isMobile = isMobileApp();
+  const isMobileStarter = isMobile && location.pathname === '/' && !isAuth;
 
   if (isMobileStarter) {
     return (
@@ -37,6 +38,11 @@ export default function RootLayout() {
     (route) => location.pathname === route || location.pathname.startsWith(`${route}/`)
   );
 
+  // Show navbar: on desktop/web always; on mobile only when authenticated
+  const showNavbar = isAuth || !isMobile;
+  // Show marketing footer: only on web marketing routes, never on mobile app
+  const showFooter = !isAppRoute && !isMobile;
+
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-slate-50 dark:bg-[#111417] text-slate-900 dark:text-[#e1e2e7] antialiased transition-colors">
       {/* Desktop Sidebar (Only for authenticated users on lg+) */}
@@ -45,16 +51,18 @@ export default function RootLayout() {
       {/* Main Container */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Navbar: Visible on mobile/tablet for everyone, and on desktop for unauthenticated visitors */}
-        <div className={`sticky top-0 z-50 w-full ${isAuth ? 'lg:hidden' : ''}`}>
-          <Navbar />
-        </div>
+        {showNavbar && (
+          <div className={`sticky top-0 z-50 w-full ${isAuth ? 'lg:hidden' : ''}`}>
+            <Navbar />
+          </div>
+        )}
 
         <main className={`flex-1 w-full ${isAuth ? 'pb-20 lg:pb-0' : ''}`}>
           <Outlet />
         </main>
 
         {/* Marketing footer for public marketing routes only */}
-        {!isAppRoute && <Footer />}
+        {showFooter && <Footer />}
 
         {/* Mobile bottom navigation for authenticated mobile users */}
         {isAuth && <MobileBottomNav />}

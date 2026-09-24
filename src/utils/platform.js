@@ -8,7 +8,7 @@ export const isNativeApp = () => {
 };
 
 /**
- * Returns true if running in native app OR mobile preview mode (?mobile=1 or ?app=1).
+ * Returns true if running in native app, standalone PWA mode, OR mobile preview mode (?mobile=1 or ?app=1).
  */
 export const isMobileApp = () => {
   if (typeof window === 'undefined') return false;
@@ -16,6 +16,12 @@ export const isMobileApp = () => {
   try {
     const params = new URLSearchParams(window.location.search);
     if (params.get('mobile') === '1' || params.get('app') === '1') return true;
+    if (
+      window.matchMedia?.('(display-mode: standalone)').matches ||
+      window.navigator?.standalone === true
+    ) {
+      return true;
+    }
   } catch {
     // Ignore in SSR/unsupported envs
   }
