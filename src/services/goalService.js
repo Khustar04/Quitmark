@@ -17,7 +17,7 @@ const getSupabaseClient = async () => {
 
 const getStorageKey = (userId) => `${STORAGE_PREFIX}${userId}`;
 
-const readCachedGoals = (userId) => {
+export const readCachedGoals = (userId) => {
   if (!userId || typeof localStorage === 'undefined') return [];
   try {
     const parsed = JSON.parse(localStorage.getItem(getStorageKey(userId)) || '[]');

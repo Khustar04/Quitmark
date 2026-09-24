@@ -2,11 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Sun, Moon } from 'lucide-react';
 import { useLocalDate } from '../hooks/useLocalDate';
-import { getGoals, saveGoal, deleteGoal } from '../services/goalService';
+import { getGoals, saveGoal, deleteGoal, readCachedGoals } from '../services/goalService';
 import { getHabits, getAllUserCheckins } from '../services/habitService';
 import { setHabits, setCheckins } from '../store/slices/habitsSlice';
 import { toggleTheme } from '../store/slices/uiSlice';
 
+import GoalsSkeleton from '../components/skeletons/GoalsSkeleton';
 import GoalsEmptyState from '../components/goals/GoalsEmptyState';
 import GoalCreationFlow from '../components/goals/GoalCreationFlow';
 import GoalsList from '../components/goals/GoalsList';
@@ -23,7 +24,11 @@ export default function GoalsPage() {
   const { items: habits, checkinsByHabit, initialized } = useSelector((state) => state.habits);
   const todayDateStr = useLocalDate();
 
-  const [goals, setGoals] = useState([]);
+  const [goals, setGoals] = useState(() => (userId ? readCachedGoals(userId) : []));
+  const [isLoading, setIsLoading] = useState(() => {
+    if (!userId) return false;
+    return readCachedGoals(userId).length === 0;
+  });
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'create' | 'detail'
   const [selectedGoal, setSelectedGoal] = useState(null);
   const [goalPendingDeletion, setGoalPendingDeletion] = useState(null);
@@ -33,9 +38,19 @@ export default function GoalsPage() {
   useEffect(() => {
     let active = true;
     if (!userId) return () => { active = false; };
-    void getGoals(userId).then((loadedGoals) => {
-      if (active) setGoals(loadedGoals);
-    });
+
+    void getGoals(userId)
+      .then((loadedGoals) => {
+        if (active) {
+          setGoals(loadedGoals);
+          setIsLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.warn('[Quitmark] Failed to fetch remote goals:', err);
+        if (active) setIsLoading(false);
+      });
+
     return () => { active = false; };
   }, [userId]);
 
@@ -122,9 +137,10 @@ export default function GoalsPage() {
   const currentView = useMemo(() => {
     if (viewMode === 'create') return 'create';
     if (viewMode === 'detail' && selectedGoal) return 'detail';
+    if (isLoading && goals.length === 0) return 'loading';
     if (goals.length === 0) return 'empty';
     return 'list';
-  }, [viewMode, selectedGoal, goals.length]);
+  }, [viewMode, selectedGoal, goals.length, isLoading]);
 
   return (
     <div className="min-h-full w-full bg-slate-50 dark:bg-[#111417] text-slate-900 dark:text-[#e1e2e7] transition-colors flex flex-col">
@@ -168,6 +184,8 @@ export default function GoalsPage() {
 
       {/* Main Page Content */}
       <div className="flex-1 w-full">
+        {currentView === 'loading' && <GoalsSkeleton />}
+
         {currentView === 'empty' && (
           <GoalsEmptyState onCreateGoal={handleOpenCreate} />
         )}
