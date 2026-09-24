@@ -1,25 +1,16 @@
 import { useMemo } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
+import { Link, useLocation } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import {
   LayoutGrid,
   CheckCircle2,
   Trophy,
   Target,
   Sliders,
-  LogOut,
 } from 'lucide-react';
-import { signOut } from '../../services/authService';
-import { clearAuth } from '../../store/slices/authSlice';
-import { resetHabitsState } from '../../store/slices/habitsSlice';
-import { setActiveUserId } from '../../utils/auth/sessionGuard';
-import { setNotificationUser } from '../../utils/notifications/inAppNotificationStore';
-import { clearNotifiedStreakHabitIds } from '../../utils/notifications/streakNotifier';
 
 export default function DesktopSidebar() {
   const location = useLocation();
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
 
   const currentPath = location.pathname;
@@ -42,20 +33,6 @@ export default function DesktopSidebar() {
   const isGoalsActive = currentPath === '/goals' || currentPath.startsWith('/goals/');
   const isSettingsActive = currentPath === '/settings' || currentPath.startsWith('/settings/');
 
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      setActiveUserId(null);
-      setNotificationUser(null);
-      clearNotifiedStreakHabitIds();
-      dispatch(clearAuth());
-      dispatch(resetHabitsState());
-      navigate('/login');
-    } catch (err) {
-      console.error('Logout error:', err);
-    }
-  };
-
   const navItemClass = (isActive) =>
     `relative flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-all ${
       isActive
@@ -76,9 +53,11 @@ export default function DesktopSidebar() {
           className="flex items-center gap-3 px-1 group focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-xl"
           aria-label="Quitmark Home"
         >
-          <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-[#272a2d] flex items-center justify-center shrink-0">
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 dark:bg-[#5af0b3]" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="Quitmark Logo"
+            className="w-8 h-8 rounded-lg object-contain shrink-0 group-hover:scale-105 transition-transform"
+          />
           <div className="flex flex-col text-left">
             <span className="text-base font-semibold text-slate-900 dark:text-[#e1e2e7] tracking-tight leading-none">
               Quitmark
@@ -143,8 +122,8 @@ export default function DesktopSidebar() {
         </nav>
       </div>
 
-      {/* Bottom Profile & Logout Card - Pinned consistently with intentional divider */}
-      <div className="mt-auto pt-4 border-t border-slate-200/80 dark:border-white/[0.04] flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-[#161a1f]">
+      {/* Bottom Profile Card - Pinned consistently with intentional divider */}
+      <div className="mt-auto pt-4 border-t border-slate-200/80 dark:border-white/[0.04] flex items-center p-2.5 rounded-xl bg-slate-50 dark:bg-[#161a1f]">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-[#272a2d] flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold text-xs shrink-0">
             {userName.charAt(0).toUpperCase()}
@@ -158,17 +137,6 @@ export default function DesktopSidebar() {
             </span>
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-colors text-xs font-semibold shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-          title="Log out of Quitmark"
-          aria-label="Log out"
-        >
-          <LogOut className="w-3.5 h-3.5 stroke-[2.2]" aria-hidden="true" />
-          <span>Logout</span>
-        </button>
       </div>
     </aside>
   );
