@@ -6,11 +6,14 @@ import ProductPreview from '../components/landing/ProductPreview';
 import HowItWorks from '../components/landing/HowItWorks';
 import StreakSection from '../components/landing/StreakSection';
 import CallToAction from '../components/landing/CallToAction';
+import { isMobileApp } from '../utils/platform';
+import MobileStarterPage from './MobileStarterPage';
 
 export default function LandingPage() {
   const containerRef = useRef(null);
   const { user, initialized } = useSelector((state) => state.auth);
   const navigate = useNavigate();
+  const isMobile = isMobileApp();
 
   useEffect(() => {
     if (initialized && user) {
@@ -19,6 +22,7 @@ export default function LandingPage() {
   }, [initialized, user, navigate]);
 
   useEffect(() => {
+    if (isMobile) return;
     // Respect user's motion preferences
     const prefersReducedMotion =
       typeof window !== 'undefined' &&
@@ -90,7 +94,11 @@ export default function LandingPage() {
       active = false;
       ctx?.revert();
     };
-  }, []);
+  }, [isMobile]);
+
+  if (isMobile) {
+    return <MobileStarterPage />;
+  }
 
   return (
     <div ref={containerRef} className="relative w-full">

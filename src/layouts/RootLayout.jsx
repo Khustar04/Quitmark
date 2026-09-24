@@ -6,6 +6,7 @@ import Footer from '../components/common/Footer';
 import MobileBottomNav from '../components/common/MobileBottomNav';
 import DesktopSidebar from '../components/dashboard/DesktopSidebar';
 import { useNotificationScheduler } from '../hooks/useNotificationScheduler';
+import { isMobileApp } from '../utils/platform';
 
 export default function RootLayout() {
   useNotificationScheduler();
@@ -20,6 +21,18 @@ export default function RootLayout() {
   }, [location.pathname, location.hash]);
 
   const isAuth = Boolean(user);
+  const isMobileStarter = isMobileApp() && location.pathname === '/' && !isAuth;
+
+  if (isMobileStarter) {
+    return (
+      <div className="min-h-screen w-full bg-gradient-to-b from-[#eef9f2] via-[#f7fcf9] to-[#e4f5eb] antialiased">
+        <main className="w-full min-h-screen">
+          <Outlet />
+        </main>
+      </div>
+    );
+  }
+
   const isAppRoute = ['/dashboard', '/habits', '/goals', '/leaderboard', '/settings'].some(
     (route) => location.pathname === route || location.pathname.startsWith(`${route}/`)
   );
