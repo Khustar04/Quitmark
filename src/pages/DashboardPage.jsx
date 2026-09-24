@@ -35,6 +35,7 @@ import {
   addHabit,
   updateHabitInState,
   removeHabitFromState,
+  replaceTempHabitId,
   setCheckins,
   setLoading,
   setError,
@@ -544,9 +545,11 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    if (isNativeApp() && habits.length > 0) {
+    if (!isNativeApp() || habits.length === 0) return;
+    const timer = setTimeout(() => {
       syncAllNativeHabitReminders(habits, remindersMap, checkinsByHabit, { userId });
-    }
+    }, 1500);
+    return () => clearTimeout(timer);
   }, [habits, remindersMap, checkinsByHabit, userId]);
 
   // GSAP animation for smooth entry — dynamically imported to avoid blocking dashboard critical path
@@ -586,36 +589,68 @@ export default function DashboardPage() {
   const handleUpdateHabit = async (id, nameOrObj, maybeCategory) => {
     const name = typeof nameOrObj === 'object' ? nameOrObj.name : nameOrObj;
     const category = typeof nameOrObj === 'object' ? nameOrObj.category : maybeCategory;
-    const updated = await updateHabit(id, name, category);
-    dispatch(updateHabitInState(updated));
+    const previousHabit = habits.find((h) => h.id === id);
 
-    const existingReminder = remindersMap[id];
-    if (isNativeApp() && existingReminder?.enabled) {
-      await scheduleNativeHabitReminder(
-        id,
-        updated.name,
-        {
-          enabled: true,
-          reminderTime: existingReminder.reminder_time,
-          repeatType: existingReminder.repeat_type,
-          repeatDays: existingReminder.repeat_days,
-        },
-        { userId }
-      );
+    // Instant optimistic update (0ms perceived latency)
+    dispatch(updateHabitInState({ id, name, category, updated_at: new Date().toISOString() }));
+    setEditingHabit(null);
+
+    try {
+      const updated = await updateHabit(id, name, category);
+      dispatch(updateHabitInState(updated));
+
+      const existingReminder = remindersMap[id];
+      if (isNativeApp() && existingReminder?.enabled) {
+        scheduleNativeHabitReminder(
+          id,
+          updated.name,
+          {
+            enabled: true,
+            reminderTime: existingReminder.reminder_time,
+            repeatType: existingReminder.repeat_type,
+            repeatDays: existingReminder.repeat_days,
+          },
+          { userId }
+        ).catch((err) => console.warn('[Quitmark] Failed to update reminder:', err));
+      }
+    } catch (err) {
+      console.error('Failed to update habit in background:', err);
+      if (previousHabit) {
+        dispatch(updateHabitInState(previousHabit));
+      }
+      dispatch(setError(err.message || 'Failed to update habit.'));
     }
   };
 
   const handleDeleteHabit = async (id) => {
-    await deleteHabit(id);
+    const habitToDelete = habits.find((h) => h.id === id);
+    const prevReminder = remindersMap[id];
+
+    // Instant optimistic removal (0ms perceived latency)
     dispatch(removeHabitFromState(id));
-    if (isNativeApp()) {
-      await cancelNativeHabitReminder(id);
-    }
+    setDeletingHabit(null);
     setRemindersMap((prev) => {
       const next = { ...prev };
       delete next[id];
       return next;
     });
+
+    if (isNativeApp()) {
+      cancelNativeHabitReminder(id).catch(() => {});
+    }
+
+    try {
+      await deleteHabit(id);
+    } catch (err) {
+      console.error('Failed to delete habit in background:', err);
+      if (habitToDelete) {
+        dispatch(addHabit(habitToDelete));
+      }
+      if (prevReminder) {
+        setRemindersMap((prev) => ({ ...prev, [id]: prevReminder }));
+      }
+      dispatch(setError(err.message || 'Failed to delete habit.'));
+    }
   };
 
   const handleReminderClick = (habit) => {
@@ -649,16 +684,29 @@ export default function DashboardPage() {
   };
 
   const handleCreateHabitSubmit = async (nameOrObj, maybeCategory) => {
+    const name = typeof nameOrObj === 'object' ? nameOrObj.name : nameOrObj;
+    const category = typeof nameOrObj === 'object' ? nameOrObj.category : maybeCategory;
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const tempHabit = {
+      id: tempId,
+      name,
+      category: category || 'General',
+      user_id: userId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    // Instant optimistic addition & close modal (0ms perceived latency)
+    dispatch(addHabit(tempHabit));
+    setIsCreateOpen(false);
+
     try {
-      const name = typeof nameOrObj === 'object' ? nameOrObj.name : nameOrObj;
-      const category = typeof nameOrObj === 'object' ? nameOrObj.category : maybeCategory;
       const newHabit = await createHabit(name, category);
-      dispatch(addHabit(newHabit));
-      setIsCreateOpen(false);
+      dispatch(replaceTempHabitId({ tempId, habit: newHabit }));
     } catch (err) {
-      console.error('Failed to create habit:', err);
-      dispatch(setError(err.message || 'Failed to create habit'));
-      throw err;
+      console.error('Failed to create habit in background:', err);
+      dispatch(removeHabitFromState(tempId));
+      dispatch(setError(err.message || 'Failed to create habit.'));
     }
   };
 

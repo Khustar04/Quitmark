@@ -53,7 +53,7 @@ export default function GoalCreationFlow({
 
     try {
       setIsSubmitting(true);
-      const saved = saveGoal({ ...formData, habit_ids: habitIds }, userId);
+      const saved = await saveGoal({ ...formData, habit_ids: habitIds }, userId);
       setCreatedGoal(saved);
       if (onGoalCreated) {
         onGoalCreated(saved);

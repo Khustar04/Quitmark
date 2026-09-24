@@ -36,6 +36,20 @@ export const habitsSlice = createSlice({
       state.items = state.items.filter((h) => h.id !== habitId);
       delete state.checkinsByHabit[habitId];
     },
+    replaceTempHabitId: (state, action) => {
+      const { tempId, habit } = action.payload;
+      const index = state.items.findIndex((h) => h.id === tempId);
+      if (index !== -1) {
+        state.items[index] = { ...state.items[index], ...habit };
+      }
+      if (state.checkinsByHabit[tempId]) {
+        state.checkinsByHabit[habit.id] = (state.checkinsByHabit[tempId] || []).map((c) => ({
+          ...c,
+          habit_id: habit.id,
+        }));
+        delete state.checkinsByHabit[tempId];
+      }
+    },
     setCheckins: (state, action) => {
       const allCheckins = action.payload || [];
       const map = {};
@@ -120,6 +134,7 @@ export const {
   addHabit,
   updateHabitInState,
   removeHabitFromState,
+  replaceTempHabitId,
   setCheckins,
   setHabitCheckinOptimistic,
   removeHabitCheckinOptimistic,

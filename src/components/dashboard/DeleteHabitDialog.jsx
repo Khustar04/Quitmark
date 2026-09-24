@@ -45,10 +45,9 @@ export default function DeleteHabitDialog({ habit, isOpen, onClose, onDelete }) 
   const handleConfirm = async () => {
     if (deleting) return;
     try {
-      setDeleting(true);
       setError(null);
-      await onDelete(habit.id);
       onClose();
+      await onDelete(habit.id);
     } catch (err) {
       setError(err.message || 'Failed to delete habit.');
       setDeleting(false);

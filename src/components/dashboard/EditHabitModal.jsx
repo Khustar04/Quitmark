@@ -97,10 +97,9 @@ export default function EditHabitModal({ habit, isOpen, onClose, onUpdate }) {
     }
 
     try {
-      setSaving(true);
       setError(null);
-      await onUpdate(habit.id, trimmed, category);
       onClose();
+      await onUpdate(habit.id, trimmed, category);
     } catch (err) {
       setError(err.message || 'Failed to update habit.');
       setSaving(false);

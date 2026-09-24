@@ -28,7 +28,6 @@ export default function GoalsPage() {
   const [selectedGoal, setSelectedGoal] = useState(null);
   const [goalPendingDeletion, setGoalPendingDeletion] = useState(null);
   const [deleteError, setDeleteError] = useState('');
-  const [isDeleting, setIsDeleting] = useState(false);
 
   // Sync goals when user changes
   useEffect(() => {
@@ -79,29 +78,43 @@ export default function GoalsPage() {
   };
 
   const handleUpdateGoal = async (updatedGoal) => {
-    const saved = await saveGoal(updatedGoal, userId);
-    setGoals((previous) => previous.map((goal) => (goal.id === saved.id ? saved : goal)));
-    setSelectedGoal(saved);
-    return saved;
+    // Instant optimistic update (0ms perceived latency)
+    setGoals((previous) => previous.map((goal) => (goal.id === updatedGoal.id ? { ...goal, ...updatedGoal } : goal)));
+    setSelectedGoal(updatedGoal);
+
+    try {
+      const saved = await saveGoal(updatedGoal, userId);
+      setGoals((previous) => previous.map((goal) => (goal.id === saved.id ? saved : goal)));
+      setSelectedGoal(saved);
+      return saved;
+    } catch (err) {
+      console.error('Failed to update goal in background:', err);
+    }
   };
 
   const handleConfirmDelete = async () => {
     if (!userId || !goalPendingDeletion) return;
-    setIsDeleting(true);
-    setDeleteError('');
     const goalId = goalPendingDeletion.id;
-    const ok = await deleteGoal(goalId, userId);
-    setIsDeleting(false);
-    if (!ok) {
-      setDeleteError('Unable to delete this goal. Please try again.');
-      return;
-    }
+    const prevGoals = goals;
     const nextGoals = goals.filter((goal) => goal.id !== goalId);
+
+    // Instant optimistic removal (0ms perceived latency)
     setGoals(nextGoals);
     setGoalPendingDeletion(null);
     if (selectedGoal?.id === goalId) {
       setSelectedGoal(null);
       setViewMode(nextGoals.length > 0 ? 'list' : 'empty');
+    }
+
+    try {
+      const ok = await deleteGoal(goalId, userId);
+      if (!ok) {
+        setGoals(prevGoals);
+        setDeleteError('Unable to delete this goal. Please try again.');
+      }
+    } catch {
+      setGoals(prevGoals);
+      setDeleteError('Unable to delete this goal. Please try again.');
     }
   };
 
@@ -201,8 +214,8 @@ export default function GoalsPage() {
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-300">This will permanently delete “{goalPendingDeletion.name}”. Your habits and check-in history will not be deleted.</p>
             {deleteError && <p role="alert" className="mt-3 text-sm text-red-600 dark:text-red-300">{deleteError}</p>}
             <div className="mt-5 flex justify-end gap-3">
-              <button type="button" disabled={isDeleting} onClick={() => { setGoalPendingDeletion(null); setDeleteError(''); }} className="goal-button-secondary">Cancel</button>
-              <button type="button" disabled={isDeleting} onClick={handleConfirmDelete} className="goal-button-danger">{isDeleting ? 'Deleting…' : 'Delete Goal'}</button>
+              <button type="button" onClick={() => { setGoalPendingDeletion(null); setDeleteError(''); }} className="goal-button-secondary">Cancel</button>
+              <button type="button" onClick={handleConfirmDelete} className="goal-button-danger">Delete Goal</button>
             </div>
           </div>
         </div>

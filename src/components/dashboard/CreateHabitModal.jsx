@@ -106,10 +106,9 @@ export default function CreateHabitModal({ isOpen, onClose, onCreate, initialCat
     }
 
     try {
-      setSubmitting(true);
       setError(null);
-      await onCreate(trimmed, category);
       onClose();
+      await onCreate(trimmed, category);
     } catch (err) {
       setError(err.message || 'Failed to create habit.');
       setSubmitting(false);

@@ -9,6 +9,7 @@ import habitsReducer, {
   addHabit,
   updateHabitInState,
   removeHabitFromState,
+  replaceTempHabitId,
   setCheckins,
   setHabitCheckinOptimistic,
   removeHabitCheckinOptimistic,
@@ -114,6 +115,33 @@ test('habitsSlice: removeHabitFromState removes the habit and its checkins', () 
   assert.equal(state.items.length, 1);
   assert.equal(state.items[0].id, 'h2');
   assert.equal(state.checkinsByHabit['h1'], undefined);
+});
+
+// ──────────────────────────────────────
+// replaceTempHabitId
+// ──────────────────────────────────────
+
+test('habitsSlice: replaceTempHabitId swaps temporary habit id and migrates checkins', () => {
+  let state = habitsReducer(initialState, addHabit({ id: 'temp-123', name: 'Optimistic Habit' }));
+  state = habitsReducer(
+    state,
+    setHabitCheckinOptimistic({
+      habitId: 'temp-123',
+      checkin: { habit_id: 'temp-123', check_in_date: '2026-09-24', status: 'completed' },
+    })
+  );
+
+  assert.equal(state.items[0].id, 'temp-123');
+  assert.equal(state.checkinsByHabit['temp-123'].length, 1);
+
+  const realHabit = { id: 'real-999', name: 'Optimistic Habit', category: 'Health' };
+  state = habitsReducer(state, replaceTempHabitId({ tempId: 'temp-123', habit: realHabit }));
+
+  assert.equal(state.items[0].id, 'real-999');
+  assert.equal(state.items[0].category, 'Health');
+  assert.equal(state.checkinsByHabit['temp-123'], undefined);
+  assert.equal(state.checkinsByHabit['real-999'].length, 1);
+  assert.equal(state.checkinsByHabit['real-999'][0].habit_id, 'real-999');
 });
 
 // ──────────────────────────────────────
