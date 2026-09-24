@@ -1,10 +1,19 @@
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo, memo, lazy, Suspense } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useLocation } from 'react-router-dom';
-import { Plus, AlertCircle, RefreshCw } from 'lucide-react';
-import gsap from 'gsap';
-import { selectDashboardSummary } from '../store/selectors/habitSelectors';
-import DashboardSummaryCards from '../components/dashboard/DashboardSummaryCards';
+import { useNavigate, Link } from 'react-router-dom';
+import {
+  AlertCircle,
+  Calendar as CalendarIcon,
+  Check,
+  Flame,
+  Zap,
+  ArrowUpDown,
+  AlignJustify,
+  Quote,
+  Trophy,
+  Sun,
+  Moon,
+} from 'lucide-react';
 
 import {
   getHabits,
@@ -18,6 +27,7 @@ import {
   upsertReminder,
   deleteReminder as deleteReminderApi,
 } from '../services/reminderService';
+import { getLeaderboard, subscribeToLeaderboard } from '../services/leaderboardService';
 import {
   setHabits,
   addHabit,
@@ -28,151 +38,411 @@ import {
   setError,
   clearError,
 } from '../store/slices/habitsSlice';
-import { useLocalDate } from '../hooks/useLocalDate';
-import { getLastNWeeksDays } from '../utils/streaks/dateUtils';
+import { toggleTheme } from '../store/slices/uiSlice';
 import { useCheckin } from '../hooks/useCheckin';
-import { checkAndNotifyStreakRisks } from '../utils/notifications/streakNotifier';
+import { useLocalDate } from '../hooks/useLocalDate';
 import { isActiveUser } from '../utils/auth/sessionGuard';
-import { subscribeToPush, isPushSupported } from '../utils/notifications/pushSubscription';
+import {
+  subscribeToPush,
+  isPushSupported,
+} from '../utils/notifications/pushSubscription';
 import { requestNotificationPermission } from '../utils/notifications/notificationService';
 import {
   scheduleNativeHabitReminder,
   cancelNativeHabitReminder,
-  syncAllNativeHabitReminders,
   ensureNotificationChannel,
+  syncAllNativeHabitReminders,
   isNativeApp,
 } from '../utils/notifications/nativeReminderService';
+import { checkAndNotifyStreakRisks } from '../utils/notifications/streakNotifier';
+import { calculateHabitSummary } from '../utils/progress/calculateHabitSummary';
 
-import HabitCard from '../components/dashboard/HabitCard';
-import CreateHabitModal from '../components/dashboard/CreateHabitModal';
-import EditHabitModal from '../components/dashboard/EditHabitModal';
-import DeleteHabitDialog from '../components/dashboard/DeleteHabitDialog';
-import EmptyHabitsState from '../components/dashboard/EmptyHabitsState';
-import ReminderModal from '../components/dashboard/ReminderModal';
+import DashboardHabitRow from '../components/dashboard/DashboardHabitRow';
+import { getHabitCategory } from '../utils/habitCategoryUtils';
+const EditHabitModal = lazy(() => import('../components/dashboard/EditHabitModal'));
+const DeleteHabitDialog = lazy(() => import('../components/dashboard/DeleteHabitDialog'));
+const ReminderModal = lazy(() => import('../components/dashboard/ReminderModal'));
 import NotificationPermissionModal from '../components/notifications/NotificationPermissionModal';
+import EmptyHabitsState from '../components/dashboard/EmptyHabitsState';
+const CreateHabitModal = lazy(() => import('../components/dashboard/CreateHabitModal'));
+import WeeklyRhythmCard from '../components/dashboard/WeeklyRhythmCard';
+import NotificationBellPopover from '../components/common/NotificationBellPopover';
+import DashboardSkeleton from '../components/skeletons/DashboardSkeleton';
+
+// Default rituals matching the Stitch screenshots for immediate parity
+const DEFAULT_RITUALS = [
+  {
+    id: 'demo-1',
+    name: 'Demo_checking',
+    category: 'General',
+    description: 'Automated morning verification cycle',
+    target_time: '08:15 AM',
+    defaultStatus: 'completed',
+    frequency: 'daily',
+  },
+  {
+    id: 'demo-2',
+    name: '1.5Hrs_English Practice',
+    category: 'Learning',
+    description: 'Pronunciation & Editorial read',
+    minutes: '90 / 90 mins',
+    target_time: '09:00 AM',
+    defaultStatus: 'completed',
+    frequency: 'daily',
+  },
+  {
+    id: 'demo-3',
+    name: 'Exercise',
+    category: 'Health',
+    description: 'Zone 2 Aerobic + Calisthenics',
+    target: '0 / 45 min target',
+    target_time: '05:00 PM',
+    defaultStatus: 'pending',
+    frequency: 'daily',
+  },
+  {
+    id: 'demo-4',
+    name: 'Read Book',
+    category: 'Learning',
+    description: 'Atomic Habits — Ch. 7: The Secret to Self-Control',
+    target_time: '08:45 AM',
+    defaultStatus: 'completed',
+    frequency: 'daily',
+  },
+  {
+    id: 'demo-5',
+    name: 'Drink Water',
+    category: 'Health',
+    description: '1.8 / 3.0 Liters',
+    progress: 60,
+    progressText: '1.8 / 3.0 Liters',
+    target_time: 'All Day',
+    defaultStatus: 'in_progress',
+    frequency: 'daily',
+  },
+];
+
+const EMPTY_CHECKINS = Object.freeze([]);
+
+const DashboardMobileHabitRow = memo(function DashboardMobileHabitRow({
+  habit,
+  checkins,
+  todayDateStr,
+  onCheckin,
+}) {
+  const cList = checkins || EMPTY_CHECKINS;
+  const record = cList.find((c) => c.check_in_date === todayDateStr);
+  const isDone = record?.status === 'completed';
+  const categoryInfo = getHabitCategory(habit.name);
+  const IconComponent = categoryInfo.icon;
+
+  const handleToggle = () => {
+    onCheckin(habit.id, isDone ? 'pending' : 'completed');
+  };
+
+  return (
+    <div
+      onClick={handleToggle}
+      className="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#141a1e] border border-slate-200/80 dark:border-white/[0.06] shadow-xs active:scale-[0.99] transition-all cursor-pointer"
+    >
+      <div className="flex items-center gap-3.5 min-w-0">
+        {/* Icon container */}
+        <div
+          className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+            isDone
+              ? 'bg-emerald-500/10 dark:bg-[#0e2322] border border-emerald-500/30 dark:border-[#143d38] text-emerald-600 dark:text-[#00E599]'
+              : 'bg-slate-100 dark:bg-[#181d22] border border-slate-200/80 dark:border-white/[0.06] text-slate-500 dark:text-slate-400'
+          }`}
+        >
+          <IconComponent className="w-5 h-5 stroke-[2]" />
+        </div>
+
+        {/* Text container */}
+        <div className="flex flex-col min-w-0 text-left">
+          <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+            {habit.name}
+          </span>
+          <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+            {habit.category || categoryInfo.name}
+          </span>
+        </div>
+      </div>
+
+      {/* Right Checkbox */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleToggle();
+        }}
+        aria-label={isDone ? 'Mark incomplete' : 'Mark completed'}
+        className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all shrink-0 cursor-pointer ${
+          isDone
+            ? 'bg-[#00E599] text-[#002114] shadow-sm'
+            : 'border-2 border-slate-300 dark:border-white/20 bg-transparent hover:border-slate-400 dark:hover:border-white/40'
+        }`}
+      >
+        {isDone && <Check className="w-4 h-4 stroke-[3]" />}
+      </button>
+    </div>
+  );
+});
 
 export default function DashboardPage() {
   const dispatch = useDispatch();
-  const location = useLocation();
-  const { items: habits, checkinsByHabit, loading, checkinLoading, error } = useSelector(
+  const navigate = useNavigate();
+  const { items: habits, checkinsByHabit, loading, initialized, checkinLoading, error } = useSelector(
     (state) => state.habits
   );
-  const userId = useSelector((state) => state.auth.user?.id);
-  const dashboardSummary = useSelector(selectDashboardSummary);
+  const { handleCheckin } = useCheckin();
+  const user = useSelector((state) => state.auth.user);
+  const theme = useSelector((state) => state.ui.theme);
+  const isDark = theme === 'dark';
+  const userId = user?.id;
 
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  // Explicit Dashboard UI State determination to prevent UI state flashing
+  const isDashboardLoading = !initialized || loading;
+  const isDashboardEmpty = initialized && !loading && !error && habits.length === 0;
+
   const [editingHabit, setEditingHabit] = useState(null);
   const [deletingHabit, setDeletingHabit] = useState(null);
-  
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+
   // Reminder state
-  const [remindersMap, setRemindersMap] = useState({}); // { [habitId]: reminderObj }
-  const [reminderHabit, setReminderHabit] = useState(null); // habit being configured
+  const [remindersMap, setRemindersMap] = useState({});
+  const [reminderHabit, setReminderHabit] = useState(null);
   const hasAutoSubscribedRef = useRef(false);
-  
-  const { handleCheckin } = useCheckin();
 
-  const containerRef = useRef(null);
-  const headerRef = useRef(null);
-  const requestIdRef = useRef(0);
+  // Category filter state for Today's Habits (desktop)
+  const [selectedCategory, setSelectedCategory] = useState('All');
 
-  // Subtle formatted date string (e.g. Saturday, September 12, 2026)
-  const formattedTodayDate = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
+  // Interactive statuses for demo rituals when user has no custom habits yet
+  const [demoStatuses, setDemoStatuses] = useState({
+    'demo-1': 'completed',
+    'demo-2': 'completed',
+    'demo-3': 'pending',
+    'demo-4': 'completed',
+    'demo-5': 'in_progress',
   });
 
-  // Calculate 7-day global activity grid
+  // Real today date string (YYYY-MM-DD)
   const todayDateStr = useLocalDate();
-  const last7Days = useMemo(() => getLastNWeeksDays(1).slice(-7), []);
-  const globalActivity = useMemo(() => {
-    return last7Days.map((dateStr) => {
-      // Check if any habit was completed on this date
-      let anyCompleted = false;
-      let anyMissed = false;
-      
-      Object.values(checkinsByHabit).forEach(checkins => {
-        const record = checkins.find(c => c.check_in_date === dateStr);
-        if (record?.status === 'completed') anyCompleted = true;
-        if (record?.status === 'missed') anyMissed = true;
-      });
 
-      let status = 'none';
-      if (anyCompleted) status = 'completed';
-      else if (anyMissed) status = 'missed';
-      else if (dateStr === todayDateStr) status = 'pending';
-      else if (dateStr > todayDateStr) status = 'future';
-
-      return { dateStr, status };
+  // Formatted date string for Desktop: "Saturday, September 20, 2026"
+  const formattedTodayDate = useMemo(() => {
+    return new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
     });
-  }, [last7Days, checkinsByHabit, todayDateStr]);
+  }, []);
 
-  // Fetch habits, check-ins, and reminders
-  const loadHabitData = useCallback(async () => {
-    if (!userId) return;
-    if (!isActiveUser(userId)) return;
-    const requestId = ++requestIdRef.current;
+  // Formatted date string for Mobile: "Tuesday, Sep 22, 2026"
+  const formattedMobileDate = useMemo(() => {
+    return new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  }, []);
+
+  // Time of day greeting
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning,';
+    if (hour < 17) return 'Good afternoon,';
+    return 'Good evening,';
+  }, []);
+
+  // Personalized user display name
+  const userName = useMemo(() => {
+    const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name;
+    if (fullName) return fullName.split(' ')[0];
+    if (user?.email) {
+      const raw = user.email.split('@')[0];
+      const alphaOnly = raw.replace(/[0-9_.-]+$/, '');
+      if (alphaOnly.toLowerCase().includes('khustar')) return 'Khustar';
+      return alphaOnly ? alphaOnly.charAt(0).toUpperCase() + alphaOnly.slice(1) : 'Khustar';
+    }
+    return 'Khustar';
+  }, [user]);
+
+  // On mobile Home section, display at most 3 habits (from real user habits)
+  const mobileDisplayHabits = useMemo(() => {
+    return habits.slice(0, 3);
+  }, [habits]);
+
+  // Determine if user has habits or should use demo placeholders
+  const isUsingDemo = habits.length === 0 && !isDashboardLoading;
+
+  // Leaderboard preview state
+  const [leaderboardUsers, setLeaderboardUsers] = useState([]);
+
+  // Live leaderboard fetcher (Dashboard only renders top 3)
+  const fetchLeaderboardData = useCallback(async () => {
     try {
-      if (!isActiveUser(userId)) return;
-      dispatch(setLoading(true));
+      const data = await getLeaderboard(5);
+      if (Array.isArray(data)) {
+        setLeaderboardUsers(data);
+      }
+    } catch (err) {
+      console.warn('[Quitmark] Failed to fetch leaderboard:', err);
+    }
+  }, []);
+
+  // Leaderboard display items (top 3 from live backend or fallback to demo)
+  const leaderboardDisplayList = useMemo(() => {
+    if (leaderboardUsers && leaderboardUsers.length > 0) {
+      return leaderboardUsers.slice(0, 3).map((entry, idx) => {
+        const parts = (entry.display_name || '').trim().split(/\s+/);
+        let initial = 'U';
+        if (parts.length >= 2 && parts[0] && parts[parts.length - 1]) {
+          initial = (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        } else if (parts[0] && parts[0].length > 0) {
+          initial = parts[0].slice(0, 2).toUpperCase();
+        }
+
+        const streakNum = Number(entry.current_streak) || 0;
+        const isCurrentUser = Boolean(userId && entry.user_id === userId);
+        const displayName = entry.display_name || (isCurrentUser ? (user?.user_metadata?.full_name || userName) : 'Anonymous');
+
+        return {
+          rank: idx + 1,
+          initial,
+          name: displayName,
+          streak: `${streakNum}-day streak`,
+          points: `${streakNum > 0 ? (streakNum * 170 + 40).toLocaleString() : '0'} pts`,
+          isUser: isCurrentUser,
+          userId: entry.user_id,
+        };
+      });
+    }
+
+    if (isUsingDemo) {
+      return [
+        { rank: 1, initial: 'SM', name: 'Sarah M.', streak: '21-day streak', points: '2,610 pts', isUser: false },
+        { rank: 2, initial: 'K', name: userName, streak: '14-day streak', points: '2,420 pts', isUser: true },
+        { rank: 3, initial: 'AL', name: 'Alexandre L.', streak: '18-day streak', points: '2,380 pts', isUser: false },
+      ];
+    }
+
+    return [];
+  }, [leaderboardUsers, userId, userName, user, isUsingDemo]);
+
+  const containerRef = useRef(null);
+  const requestIdRef = useRef(0);
+
+  // Parallelized dashboard data loading
+  const loadDashboardData = useCallback(async () => {
+    if (!userId || !isActiveUser(userId)) return;
+    const currentReq = ++requestIdRef.current;
+
+    try {
+      if (!initialized) {
+        dispatch(setLoading(true));
+      }
       dispatch(clearError());
-      const [habitsData, checkinsData] = await Promise.all([
+
+      const [habitsRes, checkinsRes, remindersRes, leaderboardRes] = await Promise.allSettled([
         getHabits(),
         getAllUserCheckins(),
+        getAllReminders(),
+        getLeaderboard(5),
       ]);
-      if (requestId !== requestIdRef.current || !isActiveUser(userId)) return;
-      dispatch(setHabits(habitsData));
-      dispatch(setCheckins(checkinsData));
+
+      if (currentReq !== requestIdRef.current) return;
+
+      if (habitsRes.status === 'fulfilled') {
+        dispatch(setHabits(habitsRes.value || []));
+      } else {
+        dispatch(setError(habitsRes.reason?.message || 'Failed to load habit data.'));
+      }
+
+      if (checkinsRes.status === 'fulfilled') {
+        dispatch(setCheckins(checkinsRes.value || []));
+      }
+
+      if (remindersRes.status === 'fulfilled') {
+        const rMap = {};
+        for (const r of remindersRes.value || []) {
+          rMap[r.habit_id] = r;
+        }
+        setRemindersMap(rMap);
+      }
+
+      if (leaderboardRes.status === 'fulfilled') {
+        setLeaderboardUsers(leaderboardRes.value || []);
+      }
     } catch (err) {
-      if (requestId !== requestIdRef.current || !isActiveUser(userId)) return;
       dispatch(setError(err.message || 'Failed to load habit data.'));
     } finally {
-      if (requestId === requestIdRef.current && isActiveUser(userId)) {
+      if (currentReq === requestIdRef.current) {
         dispatch(setLoading(false));
       }
     }
-  }, [dispatch, userId]);
-
-  // Load reminders separately (not in useEffect to satisfy lint)
-  const loadReminders = useCallback(async () => {
-    if (!userId) return;
-    try {
-      const remindersData = await getAllReminders();
-      const rMap = {};
-      for (const r of remindersData) {
-        rMap[r.habit_id] = r;
-      }
-      setRemindersMap(rMap);
-    } catch (err) {
-      console.warn('[Quitmark] Failed to load reminders:', err);
-      // Reminders are non-critical — silently fail
-    }
-  }, [userId]);
+  }, [dispatch, userId, initialized]);
 
   useEffect(() => {
-    loadHabitData();
-    // Load reminders asynchronously to avoid triggering set-state-in-effect lint
-    queueMicrotask(() => loadReminders());
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadDashboardData();
 
-    const retryReminders = () => queueMicrotask(() => loadReminders());
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') retryReminders();
+    const handleOnline = () => {
+      void loadDashboardData();
     };
 
-    window.addEventListener('online', retryReminders);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void loadDashboardData();
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       requestIdRef.current += 1;
-      window.removeEventListener('online', retryReminders);
+      window.removeEventListener('online', handleOnline);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [loadHabitData, loadReminders]);
+  }, [loadDashboardData]);
+
+  // Real-time synchronization when local user checks in habits
+  const isLeaderboardInitialMountRef = useRef(true);
+  useEffect(() => {
+    if (isLeaderboardInitialMountRef.current) {
+      isLeaderboardInitialMountRef.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      void fetchLeaderboardData();
+    }, 700);
+
+    return () => clearTimeout(timer);
+  }, [checkinsByHabit, fetchLeaderboardData]);
+
+  // Subscribe to real-time changes on habit_checkins table
+  useEffect(() => {
+    const unsubscribe = subscribeToLeaderboard(() => {
+      void fetchLeaderboardData();
+    });
+    return () => unsubscribe();
+  }, [fetchLeaderboardData]);
+
+  // Periodic polling fallback while tab is active (every 60s)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void fetchLeaderboardData();
+      }
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [fetchLeaderboardData]);
 
   const hasCheckedNotifications = useRef(false);
 
-  // Trigger streak risk notifications after habits and checkins are loaded
+  // Trigger streak risk notifications
   useEffect(() => {
     if (!loading && habits.length > 0 && !hasCheckedNotifications.current) {
       void checkAndNotifyStreakRisks(habits, checkinsByHabit);
@@ -180,28 +450,12 @@ export default function DashboardPage() {
     }
   }, [loading, habits, checkinsByHabit]);
 
-  // Scroll to habits section if hash is #habits or #habits-section
-  useEffect(() => {
-    const isHabitsHash = location.hash === '#habits' || location.hash === '#habits-section';
-    if (isHabitsHash && !loading) {
-      const el = document.getElementById('habits-section');
-      if (el) {
-        const timeout = setTimeout(() => {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 150);
-        return () => clearTimeout(timeout);
-      }
-    }
-  }, [loading, location.hash]);
-
   // Proactively ensure push subscription is registered in Supabase
-  // if reminders are active and permission is already granted on this device
   useEffect(() => {
     const autoSubscribeIfGranted = async () => {
       if (!isPushSupported()) return;
       if (Notification.permission !== 'granted') return;
 
-      // Only attempt proactive push subscription if an active service worker registration exists
       try {
         const reg = await navigator.serviceWorker?.getRegistration();
         if (!reg?.active) return;
@@ -225,76 +479,79 @@ export default function DashboardPage() {
     autoSubscribeIfGranted();
   }, [remindersMap]);
 
-  // On native Android app: ensure notification channel is registered on startup
+  // Native Android notification setup
   useEffect(() => {
     if (isNativeApp()) {
       ensureNotificationChannel();
     }
   }, []);
 
-  // Sync all habit reminders with native Android alarms when habits or reminders change
   useEffect(() => {
     if (isNativeApp() && habits.length > 0) {
-      syncAllNativeHabitReminders(habits, remindersMap, checkinsByHabit);
+      syncAllNativeHabitReminders(habits, remindersMap, checkinsByHabit, { userId });
     }
-  }, [habits, remindersMap, checkinsByHabit]);
+  }, [habits, remindersMap, checkinsByHabit, userId]);
 
-  // GSAP animation for header entrance and habit cards stagger
+  // GSAP animation for smooth entry — dynamically imported to avoid blocking dashboard critical path
   useEffect(() => {
     const prefersReducedMotion =
       typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    if (prefersReducedMotion) return;
+    if (prefersReducedMotion || !containerRef.current) return;
 
-    const ctx = gsap.context(() => {
-      if (headerRef.current) {
-        gsap.fromTo(headerRef.current,
-          { opacity: 0, y: -10 },
-          { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out' }
-        );
-      }
+    let active = true;
+    let ctx;
 
-      if (habits.length > 0) {
-        gsap.fromTo('.habit-card',
-          { opacity: 0, y: 16 },
-          { opacity: 1, y: 0, duration: 0.4, stagger: 0.07, ease: 'power2.out', delay: 0.08 }
-        );
-      }
-    }, containerRef);
+    import('gsap').then(({ default: gsap }) => {
+      if (!active || !containerRef.current) return;
 
-    return () => ctx.revert();
-  }, [habits.length]);
+      ctx = gsap.context(() => {
+        const items = containerRef.current?.querySelectorAll('.stitch-animate-item');
+        if (items && items.length > 0) {
+          gsap.from(items, {
+            opacity: 0,
+            y: 10,
+            duration: 0.3,
+            stagger: 0.04,
+            ease: 'power2.out',
+          });
+        }
+      }, containerRef);
+    });
 
-  // Habit creation handler
-  const handleCreate = async (name) => {
-    const newHabit = await createHabit(name);
-    dispatch(addHabit(newHabit));
-  };
+    return () => {
+      active = false;
+      ctx?.revert();
+    };
+  }, [loading]);
 
-  // Habit update handler
-  const handleUpdate = async (id, name) => {
+  const handleUpdateHabit = async (id, name) => {
     const updated = await updateHabit(id, name);
     dispatch(updateHabitInState(updated));
 
     const existingReminder = remindersMap[id];
     if (isNativeApp() && existingReminder?.enabled) {
-      await scheduleNativeHabitReminder(id, updated.name, {
-        enabled: true,
-        reminderTime: existingReminder.reminder_time,
-        repeatType: existingReminder.repeat_type,
-        repeatDays: existingReminder.repeat_days,
-      });
+      await scheduleNativeHabitReminder(
+        id,
+        updated.name,
+        {
+          enabled: true,
+          reminderTime: existingReminder.reminder_time,
+          repeatType: existingReminder.repeat_type,
+          repeatDays: existingReminder.repeat_days,
+        },
+        { userId }
+      );
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDeleteHabit = async (id) => {
     await deleteHabit(id);
     dispatch(removeHabitFromState(id));
     if (isNativeApp()) {
       await cancelNativeHabitReminder(id);
     }
-    // Also clean up local reminder state
     setRemindersMap((prev) => {
       const next = { ...prev };
       delete next[id];
@@ -302,7 +559,6 @@ export default function DashboardPage() {
     });
   };
 
-  // Reminder handlers
   const handleReminderClick = (habit) => {
     setReminderHabit(habit);
   };
@@ -310,33 +566,38 @@ export default function DashboardPage() {
   const handleReminderSave = async (config) => {
     if (!reminderHabit) return;
 
-    // Request permission while this handler is still running from the user's
-    // Save click. Browsers can reject permission prompts started after an
-    // unrelated awaited request has completed.
     let notificationPermission = null;
     if (config.enabled && isPushSupported() && !isNativeApp()) {
       notificationPermission = await requestNotificationPermission();
     }
 
-    // Save the reminder before attempting browser push setup. Push is an
-    // optional delivery enhancement and must not block the database write.
     const saved = await upsertReminder(reminderHabit.id, config);
     setRemindersMap((prev) => ({ ...prev, [reminderHabit.id]: saved }));
 
-    // On native mobile app, schedule direct OS AlarmManager notification
     if (isNativeApp()) {
       if (config.enabled) {
-        await scheduleNativeHabitReminder(reminderHabit.id, reminderHabit.name, config);
+        await scheduleNativeHabitReminder(reminderHabit.id, reminderHabit.name, config, { userId });
       } else {
         await cancelNativeHabitReminder(reminderHabit.id);
       }
     } else if (config.enabled && notificationPermission === 'granted') {
-      // Request permission + create a push subscription in the background (web/PWA)
       void (async () => {
         await subscribeToPush();
       })().catch((error) => {
         console.warn('[Quitmark] Push setup skipped:', error);
       });
+    }
+  };
+
+  const handleCreateHabitSubmit = async (name) => {
+    try {
+      const newHabit = await createHabit(name);
+      dispatch(addHabit(newHabit));
+      setIsCreateOpen(false);
+    } catch (err) {
+      console.error('Failed to create habit:', err);
+      dispatch(setError(err.message || 'Failed to create habit'));
+      throw err;
     }
   };
 
@@ -353,168 +614,775 @@ export default function DashboardPage() {
     });
   };
 
+  // Determine active habits list: custom habits if any exist, otherwise DEFAULT_RITUALS for visual parity
+  const activeHabits = isUsingDemo ? DEFAULT_RITUALS : habits;
+
+  // Handle demo checkin toggle
+  const handleDemoCheckin = (habitId, nextStatus) => {
+    setDemoStatuses((prev) => ({
+      ...prev,
+      [habitId]: nextStatus,
+    }));
+  };
+
+
+  // Progress calculations for Today
+  const { todayCompletedCount, totalHabitsCount, completionPercentage } = useMemo(() => {
+    if (isUsingDemo) {
+      let completed = 0;
+      DEFAULT_RITUALS.forEach((r) => {
+        if (demoStatuses[r.id] === 'completed') completed++;
+      });
+      return {
+        todayCompletedCount: completed,
+        totalHabitsCount: 5,
+        completionPercentage: Math.round((completed / 5) * 100),
+      };
+    }
+
+    const total = habits.length;
+    if (total === 0) {
+      return { todayCompletedCount: 0, totalHabitsCount: 0, completionPercentage: 0 };
+    }
+
+    let completed = 0;
+    for (const habit of habits) {
+      const cList = checkinsByHabit[habit.id] || [];
+      const record = cList.find((c) => c.check_in_date === todayDateStr);
+      if (record?.status === 'completed') {
+        completed += 1;
+      }
+    }
+
+    const pct = Math.round((completed / total) * 100);
+    return {
+      todayCompletedCount: completed,
+      totalHabitsCount: total,
+      completionPercentage: pct,
+    };
+  }, [isUsingDemo, demoStatuses, habits, checkinsByHabit, todayDateStr]);
+
+  // Overall streak stats
+  const streakStats = useMemo(() => {
+    if (isUsingDemo) {
+      return {
+        currentStreak: 14,
+        longestStreak: 21,
+      };
+    }
+
+    let maxCurrent = 0;
+    let maxLongest = 0;
+
+    for (const habit of habits) {
+      const cList = checkinsByHabit[habit.id] || [];
+      const summary = calculateHabitSummary(cList, todayDateStr);
+      if (summary.currentStreak > maxCurrent) {
+        maxCurrent = summary.currentStreak;
+      }
+      if (summary.longestStreak > maxLongest) {
+        maxLongest = summary.longestStreak;
+      }
+    }
+
+    return {
+      currentStreak: maxCurrent,
+      longestStreak: maxLongest,
+    };
+  }, [isUsingDemo, habits, checkinsByHabit, todayDateStr]);
+
+  // Filtered habits by Category (for desktop filter bar)
+  const filteredHabits = useMemo(() => {
+    if (selectedCategory === 'All') return activeHabits;
+    return activeHabits.filter((h) => {
+      const cat = h.category || getHabitCategory(h.name).name;
+      return cat.toLowerCase() === selectedCategory.toLowerCase();
+    });
+  }, [activeHabits, selectedCategory]);
+
+  // Circular progress SVG values (desktop)
+  const ringRadius = 42;
+  const ringCircumference = 2 * Math.PI * ringRadius; // 263.89
+  const ringOffset = ringCircumference - (completionPercentage / 100) * ringCircumference;
+  const remainingCount = Math.max(0, totalHabitsCount - todayCompletedCount);
+
   return (
-    <div ref={containerRef} className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 min-h-screen flex flex-col">
+    <div
+      ref={containerRef}
+      className="flex-1 flex flex-col min-w-0 bg-slate-50 dark:bg-[#111417] text-slate-900 dark:text-[#e1e2e7] selection:bg-emerald-500 selection:text-[#003825]"
+    >
       {/* Automatic Notification Permission Modal */}
       <NotificationPermissionModal />
-
-      {/* 1. Header Section */}
-      <div
-        ref={headerRef}
-        className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 sm:pb-8 border-b border-zinc-200/80 dark:border-[#232936] mb-8"
-      >
-        <div>
-          <p className="text-xs sm:text-sm font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-1">
-            {formattedTodayDate}
-          </p>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
-            Your Habits
-          </h1>
-          <p className="mt-1 text-sm sm:text-base text-zinc-500 dark:text-zinc-400">
-            One day at a time.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-auto">
-          <button
-            type="button"
-            onClick={loadHabitData}
-            disabled={loading}
-            className="p-2.5 rounded-xl border border-zinc-200 dark:border-[#232936] bg-white dark:bg-[#0D0F17] text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-300 dark:hover:border-[#334155] transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-            title="Refresh habits"
-            aria-label="Refresh habits"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setIsCreateOpen(true)}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition-all shadow-sm shadow-emerald-600/25 dark:shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-emerald-600/35 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>New Habit</span>
-          </button>
-        </div>
-      </div>
 
       {/* Error Alert */}
       {error && (
         <div
           role="alert"
-          className="mb-8 p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400 text-sm flex items-start justify-between gap-3"
+          className="mx-4 sm:mx-8 mt-4 p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 text-sm flex items-start justify-between gap-3 shadow-sm"
         >
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 shrink-0" />
+            <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
             <span>{error}</span>
           </div>
           <button
             type="button"
             onClick={() => dispatch(clearError())}
-            className="text-xs font-semibold hover:underline"
+            className="text-xs font-semibold hover:underline cursor-pointer"
           >
             Dismiss
           </button>
         </div>
       )}
 
-      {/* Loading Skeleton */}
-      {loading ? (
-        <div className="flex flex-col gap-4">
-          {[1, 2, 3].map((n) => (
-            <div
-              key={n}
-              className="h-28 rounded-2xl border border-zinc-200/60 dark:border-[#232936] bg-zinc-100/60 dark:bg-[#0D0F17]/50 animate-pulse"
-            />
-          ))}
+      {/* ========================================================================= */}
+      {/* MOBILE APPLICATION VIEW (< lg) — PHONE APP VIEW                          */}
+      {/* ========================================================================= */}
+      <div className="lg:hidden flex flex-col w-full px-4 pt-4 pb-4 text-slate-900 dark:text-[#e1e2e7]">
+        {/* Greeting & Philosophy Quote */}
+        <div className="flex flex-col text-left">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight leading-snug flex items-center gap-2 whitespace-nowrap">
+            <span>{greeting} {userName}!</span>
+            <span className="inline-block">👋</span>
+          </h1>
+          <p className="text-sm italic text-slate-500 dark:text-slate-400 mt-1">
+            &ldquo;Discipline today, a better tomorrow.&rdquo;
+          </p>
         </div>
-      ) : (
-        /* Habits Main Content Area - Always wraps habit section with canonical ID */
-        <div id="habits-section" className="space-y-8 flex-1 scroll-mt-20">
-          {habits.length === 0 ? (
-            /* Empty State */
-            <EmptyHabitsState onCreateClick={() => setIsCreateOpen(true)} />
-          ) : (
-            <>
-              {/* Dashboard Summary Cards */}
-              <DashboardSummaryCards
-                dashboardSummary={dashboardSummary}
-                globalActivity={globalActivity}
-              />
 
-              {/* Habit List Toolbar */}
-              <div className="flex items-center justify-between mt-2">
-                <h2 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                  My Habits
-                  <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-[#232936] text-xs font-mono text-zinc-500 dark:text-zinc-400">
-                    {habits.length}
+        {isDashboardLoading ? (
+          <DashboardSkeleton variant="mobile" />
+        ) : isDashboardEmpty ? (
+          <div className="mt-5">
+            <EmptyHabitsState
+              onCreateClick={() => setIsCreateOpen(true)}
+              onAddPreset={handleCreateHabitSubmit}
+            />
+          </div>
+        ) : (
+          <>
+            {/* Date Selector Row */}
+            <div className="flex items-center justify-between mt-5">
+              <div className="flex items-center gap-2 text-slate-300 text-sm font-medium">
+                <CalendarIcon className="w-4 h-4 text-slate-400" />
+                <span>{formattedMobileDate}</span>
+              </div>
+              <span className="px-3 py-1 rounded-md bg-[#181d22] border border-white/[0.08] text-[11px] font-mono font-bold text-slate-300 tracking-wider uppercase">
+                TODAY
+              </span>
+            </div>
+
+            {/* Today's Progress Card */}
+            <div className="rounded-2xl bg-white dark:bg-[#141a1e] border border-slate-200/80 dark:border-white/[0.08] p-4 sm:p-5 mt-4 shadow-sm flex items-center gap-3.5 sm:gap-4 transition-colors">
+              {/* Circular Progress Gauge */}
+              <div className="relative w-20 h-20 flex items-center justify-center shrink-0">
+                <svg className="w-full h-full -rotate-90" viewBox="0 0 80 80">
+                  <circle
+                    className="stroke-slate-200 dark:stroke-[#1d252b]"
+                    cx="40"
+                    cy="40"
+                    fill="transparent"
+                    r="31"
+                    strokeWidth="6"
+                  />
+                  <circle
+                    className="stroke-[#00E599] transition-all duration-700"
+                    cx="40"
+                    cy="40"
+                    fill="transparent"
+                    r="31"
+                    strokeWidth="6"
+                    strokeDasharray="194.78"
+                    strokeDashoffset={194.78 - (completionPercentage / 100) * 194.78}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center font-mono select-none">
+                  <span className="text-sm font-bold text-slate-900 dark:text-white leading-none">
+                    {todayCompletedCount}
                   </span>
-                </h2>
-                <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                  {dashboardSummary.overallConsistency} consistency
+                  <span className="text-xs text-slate-400 font-normal leading-none">
+                    /{totalHabitsCount}
+                  </span>
                 </div>
               </div>
 
-              {/* Habits Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {habits.map((habit) => (
-                  <HabitCard
-                    key={habit.id}
-                    habit={habit}
-                    checkins={checkinsByHabit[habit.id] || []}
-                    onCheckin={handleCheckin}
-                    onEdit={(h) => setEditingHabit(h)}
-                    onDelete={(h) => setDeletingHabit(h)}
-                    isCheckingIn={Boolean(checkinLoading[habit.id])}
-                    reminder={remindersMap[habit.id] || null}
-                    onReminderClick={handleReminderClick}
+              {/* Right Progress Details */}
+              <div className="flex-1 min-w-0 flex flex-col justify-center text-left">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-col">
+                    <span className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-wider leading-tight">
+                      TODAY&apos;S PROGRESS
+                    </span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 leading-tight mt-1">
+                      {todayCompletedCount} of {totalHabitsCount} habits completed
+                    </span>
+                  </div>
+                  <span className="text-sm font-mono font-bold text-emerald-600 dark:text-[#00E599] leading-tight shrink-0">
+                    {completionPercentage}%
+                  </span>
+                </div>
+
+                {/* Horizontal Bar */}
+                <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-[#1c242a] overflow-hidden mt-3">
+                  <div
+                    style={{ width: `${completionPercentage}%` }}
+                    className="h-full bg-[#00E599] rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(0,229,153,0.35)]"
                   />
-                ))}
+                </div>
+
+                {/* Status Feedback */}
+                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-[#00E599] text-xs font-medium mt-2.5">
+                  <Check className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
+                  <span className="truncate">
+                    {completionPercentage === 100
+                      ? 'All habits completed! Amazing work!'
+                      : completionPercentage > 0
+                      ? "You're doing great! Keep going!"
+                      : 'Start your day by checking in a habit!'}
+                  </span>
+                </div>
               </div>
-            </>
-          )}
-        </div>
-      )}
+            </div>
+
+            {/* Today's Habits Section */}
+            <div className="mt-6 flex flex-col">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
+                  Today&apos;s Habits
+                </h2>
+                {habits.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/habits')}
+                    className="text-xs font-semibold text-[#00E599] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>View All</span>
+                    <span>&rarr;</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Habits Content / Empty State */}
+              {habits.length === 0 ? (
+                <EmptyHabitsState
+                  onCreateClick={() => setIsCreateOpen(true)}
+                  onAddPreset={handleCreateHabitSubmit}
+                />
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {mobileDisplayHabits.map((habit) => (
+                    <DashboardMobileHabitRow
+                      key={habit.id}
+                      habit={habit}
+                      checkins={checkinsByHabit[habit.id] || EMPTY_CHECKINS}
+                      todayDateStr={todayDateStr}
+                      onCheckin={handleCheckin}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Weekly Rhythm 7-Day Momentum Card */}
+            <WeeklyRhythmCard
+              habits={habits}
+              checkinsByHabit={checkinsByHabit}
+              todayDateStr={todayDateStr}
+              isUsingDemo={isUsingDemo}
+              demoStatuses={demoStatuses}
+              className="mt-4"
+            />
+
+            {/* Active Cycle Goal & Sprint Card */}
+            <div className="rounded-2xl bg-[#141a1e] border border-white/[0.06] p-4 mt-3 text-left shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5 text-slate-400">
+                  <Zap className="w-3.5 h-3.5 text-[#00E599]" />
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                    Active Cycle Goal
+                  </span>
+                </div>
+                <span className="font-mono text-xs font-bold text-[#00E599]">Day 14 of 30</span>
+              </div>
+              <p className="text-sm font-semibold text-white">
+                Deep Work &amp; Wellness 30-Day Sprint
+              </p>
+              <div className="w-full h-1.5 rounded-full bg-[#1f282e] overflow-hidden mt-2.5">
+                <div
+                  style={{ width: '46%' }}
+                  className="h-full bg-[#00E599] rounded-full transition-all duration-500"
+                />
+              </div>
+              <div className="flex items-center justify-between mt-2.5 text-[11px] text-slate-400">
+                <span className="flex items-center gap-1 text-emerald-400">
+                  <span>🔥</span> 14-day streak active
+                </span>
+                <span>16 days remaining</span>
+              </div>
+            </div>
+
+            {/* Motivational Quote Card */}
+            <div className="rounded-2xl bg-[#141a1e] border border-white/[0.06] p-4 text-center mt-3 mb-2">
+              <p className="text-xs text-slate-400 italic leading-relaxed">
+                &ldquo;Consistency turns small steps into big results.&rdquo;
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* DESKTOP VIEW (≥ lg) — UNTOUCHED & 100% PRESERVED FROM PREVIOUS STEP       */}
+      {/* ========================================================================= */}
+      <div className="hidden lg:flex flex-col flex-1 min-w-0">
+        {/* Fixed/Sticky Header (Exact Stitch Spec) */}
+        <header className="sticky top-0 z-40 h-16 bg-white/95 dark:bg-[#0b0e11]/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-white/[0.04] px-6 sm:px-8 flex items-center justify-between transition-colors shadow-xs">
+          {/* Left: Greeting & Date */}
+          <div className="flex flex-col text-left">
+            <span className="text-base sm:text-lg font-medium text-slate-900 dark:text-[#e1e2e7] leading-tight">
+              {greeting} {userName}
+            </span>
+            <span className="text-xs text-slate-500 dark:text-[#85948b] leading-tight mt-0.5">
+              {formattedTodayDate}
+            </span>
+          </div>
+
+          {/* Right: Notification Bell, Theme Toggle, Profile / Settings */}
+          <div className="flex items-center gap-3">
+            {/* Notification Bell Center */}
+            <NotificationBellPopover
+              triggerClassName="w-9 h-9 rounded-lg bg-slate-100 dark:bg-[#191c1f] hover:bg-slate-200 dark:hover:bg-[#272a2d] text-slate-500 dark:text-[#85948b] hover:text-slate-900 dark:hover:text-[#e1e2e7] transition-colors flex items-center justify-center cursor-pointer"
+            />
+
+            {/* Theme Toggle Button (Night / Light Mode) */}
+            <button
+              type="button"
+              onClick={() => dispatch(toggleTheme())}
+              aria-label="Toggle theme"
+              title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-[#191c1f] hover:bg-slate-200 dark:hover:bg-[#272a2d] text-slate-600 dark:text-[#85948b] hover:text-slate-900 dark:hover:text-[#e1e2e7] transition-colors flex items-center justify-center cursor-pointer"
+            >
+              {isDark ? (
+                <Sun className="w-4 h-4 text-amber-400 stroke-[2]" />
+              ) : (
+                <Moon className="w-4 h-4 text-slate-600 stroke-[2]" />
+              )}
+            </button>
+          </div>
+        </header>
+
+        {/* Main Workspace Body */}
+        <main className="w-full flex-1 px-4 sm:px-6 lg:px-8 py-6 pb-12">
+          <div className="flex flex-col gap-6 w-full max-w-[1240px] mx-auto">
+            {isDashboardLoading ? (
+              <DashboardSkeleton />
+            ) : isDashboardEmpty ? (
+              <EmptyHabitsState
+                onCreateClick={() => setIsCreateOpen(true)}
+                onAddPreset={handleCreateHabitSubmit}
+              />
+            ) : (
+              <>
+                {/* HERO / IN-PROGRESS MOMENTUM SECTION */}
+                <section className="stitch-animate-item relative overflow-hidden rounded-xl bg-white dark:bg-[#191c1f] p-6 sm:p-8 shadow-xs border border-slate-200/80 dark:border-white/[0.04] transition-colors">
+              <div className="absolute -right-16 -top-16 w-80 h-80 rounded-full bg-emerald-500/5 dark:bg-[#5af0b3]/5 blur-3xl pointer-events-none" />
+
+              <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6 sm:gap-8">
+                {/* Left Info Cluster */}
+                <div className="flex flex-col gap-2 max-w-xl text-left">
+                  {/* Ritual Cadence Active Badge */}
+                  <div className="inline-flex items-center gap-1.5 self-start px-2.5 py-0.5 rounded-full bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-mono text-xs font-medium tracking-wide">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+                    <span>RITUAL CADENCE: ACTIVE</span>
+                  </div>
+
+                  {/* Headline */}
+                  <h1 className="text-2xl sm:text-[28px] font-semibold text-slate-900 dark:text-[#e1e2e7] tracking-tight leading-snug">
+                    Today&apos;s Momentum:{' '}
+                    <span className="text-emerald-500 dark:text-[#5af0b3] font-semibold">
+                      {todayCompletedCount} of {totalHabitsCount}
+                    </span>{' '}
+                    rituals fulfilled
+                  </h1>
+
+                  {/* Subtitle */}
+                  <p className="text-sm sm:text-base text-slate-500 dark:text-[#85948b]">
+                    Discipline today, quietly compounded tomorrow.
+                  </p>
+
+                  {/* Micro Stats Cluster */}
+                  <div className="flex flex-wrap items-center gap-4 sm:gap-6 mt-3 pt-1">
+                    {/* Streak */}
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-[#1d2023] flex items-center justify-center text-emerald-500 dark:text-[#5af0b3]">
+                        <Flame className="w-4 h-4 fill-current" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-mono text-base font-semibold text-slate-900 dark:text-[#e1e2e7] leading-none">
+                          {streakStats.currentStreak} Days
+                        </span>
+                        <span className="text-[11px] text-slate-500 dark:text-[#85948b] mt-1 leading-none">
+                          Unbroken streak
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="h-8 w-px bg-slate-200 dark:bg-[#323538] hidden sm:block" />
+
+                    {/* Focus Precision */}
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-[#1d2023] flex items-center justify-center text-teal-400 dark:text-[#44e2cd]">
+                        <Zap className="w-4 h-4 fill-current" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-mono text-base font-semibold text-slate-900 dark:text-[#e1e2e7] leading-none">
+                          {completionPercentage}%
+                        </span>
+                        <span className="text-[11px] text-slate-500 dark:text-[#85948b] mt-1 leading-none">
+                          Focus precision
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="h-8 w-px bg-slate-200 dark:bg-[#323538] hidden sm:block" />
+
+                    {/* Status Caption */}
+                    <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 text-xs font-medium select-none pointer-events-none" role="status">
+                      <Check className="w-3.5 h-3.5 stroke-[2.5]" aria-hidden="true" />
+                      <span>You&apos;re doing great! Keep going!</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Metric Radial Gauge Box */}
+                <div className="flex items-center gap-4 bg-slate-50 dark:bg-[#1d2023] p-4 rounded-xl shrink-0 self-start lg:self-auto border border-slate-200/60 dark:border-transparent">
+                  <div className="relative w-28 h-28 flex items-center justify-center shrink-0">
+                    <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                      <circle
+                        className="text-slate-200 dark:text-[#272a2d]"
+                        cx="50"
+                        cy="50"
+                        fill="transparent"
+                        r={ringRadius}
+                        stroke="currentColor"
+                        strokeWidth="8"
+                      />
+                      <circle
+                        className="text-emerald-500 dark:text-[#34d399] transition-all duration-700"
+                        cx="50"
+                        cy="50"
+                        fill="transparent"
+                        r={ringRadius}
+                        stroke="currentColor"
+                        strokeDasharray={ringCircumference}
+                        strokeDashoffset={ringOffset}
+                        strokeLinecap="round"
+                        strokeWidth="8"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                      <span className="font-mono text-xl sm:text-2xl font-bold text-slate-900 dark:text-[#e1e2e7] leading-none">
+                        {completionPercentage}%
+                      </span>
+                      <span className="text-[11px] text-slate-500 dark:text-[#85948b] mt-1 leading-none font-medium">
+                        {todayCompletedCount} / {totalHabitsCount} Done
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1 min-w-[130px] text-left">
+                    <span className="text-[11px] text-slate-400 dark:text-[#85948b] uppercase tracking-wider font-semibold">
+                      Remaining
+                    </span>
+                    <span className="text-lg font-medium text-slate-900 dark:text-[#e1e2e7] leading-none mt-0.5">
+                      {remainingCount} Rituals
+                    </span>
+                    <p className="text-xs text-slate-500 dark:text-[#85948b] mt-1 leading-snug">
+                      Approx. {remainingCount * 32 || 65}m active focus time remaining.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* MAIN WORKSPACE GRID: HABITS (8-COL) + SIDEBAR (4-COL) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full items-start">
+              {/* Habits Board Main Column (8 Cols) */}
+              <section className="stitch-animate-item lg:col-span-8 flex flex-col gap-3">
+                {/* Filter Bar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-1.5 bg-slate-100 dark:bg-[#0b0e11] rounded-xl border border-slate-200/80 dark:border-transparent">
+                      {/* Category tabs */}
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {['All', 'Learning', 'Health', 'General'].map((cat) => {
+                          const isActive = selectedCategory.toLowerCase() === cat.toLowerCase();
+                          return (
+                            <button
+                              key={cat}
+                              type="button"
+                              onClick={() => setSelectedCategory(cat)}
+                              className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                                isActive
+                                  ? 'bg-white dark:bg-[#1d2023] text-slate-900 dark:text-[#e1e2e7] shadow-sm'
+                                  : 'text-slate-500 dark:text-[#85948b] hover:text-slate-900 dark:hover:text-[#e1e2e7] hover:bg-white/60 dark:hover:bg-[#191c1f]'
+                              }`}
+                            >
+                              <span className="inline-flex items-center gap-1.5">
+                                <span>{cat}</span>
+                                {cat === 'All' && (
+                                  <span className="px-1.5 py-0.5 rounded-full text-[11px] font-mono leading-none bg-slate-200/80 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+                                    {activeHabits.length}
+                                  </span>
+                                )}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Right controls: Chronological Sort & View Mode */}
+                      <div className="flex items-center gap-1.5 text-slate-400 dark:text-[#85948b] self-end sm:self-auto">
+                        <button
+                          type="button"
+                          title="Chronological Sort"
+                          className="w-8 h-8 rounded-lg bg-white dark:bg-[#191c1f] hover:bg-slate-200 dark:hover:bg-[#1d2023] flex items-center justify-center transition-colors cursor-pointer"
+                        >
+                          <ArrowUpDown className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          title="Display Compact Mode"
+                          className="w-8 h-8 rounded-lg bg-white dark:bg-[#191c1f] hover:bg-slate-200 dark:hover:bg-[#1d2023] flex items-center justify-center transition-colors cursor-pointer"
+                        >
+                          <AlignJustify className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Habit Rows List */}
+                    <div className="flex flex-col gap-2.5">
+                      {filteredHabits.map((habit) => (
+                        <DashboardHabitRow
+                          key={habit.id}
+                          habit={habit}
+                          checkins={checkinsByHabit[habit.id] || EMPTY_CHECKINS}
+                          overrideCompleted={
+                            isUsingDemo ? demoStatuses[habit.id] === 'completed' : undefined
+                          }
+                          onCheckin={
+                            isUsingDemo ? handleDemoCheckin : handleCheckin
+                          }
+                          onEdit={setEditingHabit}
+                          onDelete={setDeletingHabit}
+                          isCheckingIn={Boolean(checkinLoading[habit.id])}
+                          reminder={remindersMap[habit.id] || null}
+                          onReminderClick={handleReminderClick}
+                        />
+                      ))}
+                    </div>
+              </section>
+
+              {/* Right Column Telemetry Widgets (4 Cols) */}
+              <aside className="stitch-animate-item lg:col-span-4 flex flex-col gap-4">
+                {/* 1. Weekly Rhythm Grid */}
+                <WeeklyRhythmCard
+                  habits={habits}
+                  checkinsByHabit={checkinsByHabit}
+                  todayDateStr={todayDateStr}
+                  isUsingDemo={isUsingDemo}
+                  demoStatuses={demoStatuses}
+                />
+
+                {/* 2. Leaderboard Pulse */}
+                <div className="flex flex-col gap-3 p-4 rounded-xl bg-white dark:bg-[#191c1f] border border-slate-200/80 dark:border-white/[0.04] shadow-xs text-left">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Trophy className="w-4 h-4 text-emerald-400 dark:text-[#79edb9]" />
+                      <span className="text-sm font-medium text-slate-900 dark:text-[#e1e2e7]">
+                        Leaderboard Pulse
+                      </span>
+                    </div>
+                    <Link
+                      to="/leaderboard"
+                      className="text-xs text-slate-400 dark:text-[#85948b] hover:text-emerald-500 dark:hover:text-[#5af0b3] transition-colors"
+                    >
+                      Cohort Alpha
+                    </Link>
+                  </div>
+
+                  {/* Top 3 Ranks */}
+                  <div className="flex flex-col gap-2">
+                    {leaderboardDisplayList.length > 0 ? (
+                      leaderboardDisplayList.map((entry) => (
+                        <div
+                          key={entry.userId || `${entry.rank}-${entry.name}`}
+                          className={`flex items-center justify-between p-2 rounded-lg ${
+                            entry.isUser
+                              ? 'bg-emerald-50/50 dark:bg-[#1d2023]'
+                              : 'bg-slate-50 dark:bg-[#0b0e11]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span
+                              className={`font-mono text-xs w-4 shrink-0 text-center ${
+                                entry.isUser
+                                  ? 'text-emerald-600 dark:text-[#5af0b3] font-bold'
+                                  : 'text-slate-400 dark:text-[#85948b]'
+                              }`}
+                            >
+                              {entry.rank}
+                            </span>
+                            <div
+                              className={`w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-xs font-semibold ${
+                                entry.isUser
+                                  ? 'bg-emerald-500 dark:bg-[#5af0b3] text-slate-950 dark:text-[#003825] font-bold'
+                                  : 'bg-slate-200 dark:bg-[#272a2d] text-slate-600 dark:text-[#85948b]'
+                              }`}
+                            >
+                              {entry.initial}
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span
+                                  className={`text-xs font-medium leading-none truncate ${
+                                    entry.isUser
+                                      ? 'font-semibold text-slate-900 dark:text-[#e1e2e7]'
+                                      : 'text-slate-900 dark:text-[#e1e2e7]'
+                                  }`}
+                                >
+                                  {entry.name}
+                                </span>
+                                {entry.isUser && (
+                                  <span className="shrink-0 px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-600 dark:text-[#5af0b3] font-mono text-[9px] uppercase font-bold">
+                                    YOU
+                                  </span>
+                                )}
+                              </div>
+                              <span
+                                className={`text-[10px] mt-0.5 truncate ${
+                                  entry.isUser
+                                    ? 'text-emerald-600 dark:text-[#34d399]'
+                                    : 'text-slate-400 dark:text-[#85948b]'
+                                }`}
+                              >
+                                {entry.streak}
+                              </span>
+                            </div>
+                          </div>
+                          <span
+                            className={`shrink-0 ml-2 font-mono text-xs ${
+                              entry.isUser
+                                ? 'font-bold text-emerald-600 dark:text-[#5af0b3]'
+                                : 'font-semibold text-slate-900 dark:text-[#e1e2e7]'
+                            }`}
+                          >
+                            {entry.points}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-5 px-3 text-center rounded-lg bg-slate-50 dark:bg-[#0b0e11]">
+                        <Trophy className="w-5 h-5 text-slate-300 dark:text-[#85948b] mb-1 opacity-60" />
+                        <span className="text-xs font-medium text-slate-700 dark:text-[#e1e2e7]">
+                          No active streaks yet
+                        </span>
+                        <span className="text-[11px] text-slate-400 dark:text-[#85948b] mt-0.5">
+                          Complete habits to start the streak leaderboard!
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Daily Affirmation & Active Cycle Goal */}
+                <div className="relative overflow-hidden rounded-xl bg-white dark:bg-[#191c1f] border border-slate-200/80 dark:border-white/[0.04] p-4 shadow-xs text-left">
+                  <div className="flex flex-col gap-3">
+                    {/* Daily Affirmation Header */}
+                    <div className="flex items-center gap-1.5 text-slate-400 dark:text-[#85948b]">
+                      <Quote className="w-3.5 h-3.5 text-emerald-500 dark:text-[#5af0b3]" />
+                      <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        Daily Affirmation
+                      </span>
+                    </div>
+
+                    <blockquote className="text-sm text-slate-800 dark:text-[#e1e2e7] italic font-normal leading-relaxed">
+                      &ldquo;Consistency turns small steps into big results.&rdquo;
+                    </blockquote>
+
+                    {/* Active Cycle Goal */}
+                    <div className="pt-2 border-t border-slate-100 dark:border-[#272a2d] flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                          Active Cycle Goal
+                        </span>
+                        <span className="font-mono text-xs text-emerald-500 dark:text-[#5af0b3] font-semibold">
+                          Day 14 of 30
+                        </span>
+                      </div>
+
+                      <div className="w-full h-1.5 rounded-full bg-slate-200 dark:bg-[#323538] overflow-hidden">
+                        <div className="h-full bg-emerald-500 dark:bg-[#34d399] rounded-full w-[46%] transition-all duration-500" />
+                      </div>
+
+                      <span className="text-[11px] text-slate-500 dark:text-[#85948b] mt-0.5">
+                        Deep Work &amp; Wellness 30-Day Sprint
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </>
+        )}
+      </div>
+    </main>
+      </div>
 
       {/* Modals */}
       {isCreateOpen && (
-        <CreateHabitModal
-          isOpen={isCreateOpen}
-          onClose={() => setIsCreateOpen(false)}
-          onCreate={handleCreate}
-        />
+        <Suspense fallback={null}>
+          <CreateHabitModal
+            isOpen={isCreateOpen}
+            onClose={() => setIsCreateOpen(false)}
+            onCreate={handleCreateHabitSubmit}
+          />
+        </Suspense>
       )}
-
       {editingHabit && (
-        <EditHabitModal
-          key={editingHabit.id}
-          habit={editingHabit}
-          isOpen={Boolean(editingHabit)}
-          onClose={() => setEditingHabit(null)}
-          onUpdate={handleUpdate}
-        />
+        <Suspense fallback={null}>
+          <EditHabitModal
+            key={editingHabit.id}
+            habit={editingHabit}
+            isOpen={Boolean(editingHabit)}
+            onClose={() => setEditingHabit(null)}
+            onUpdate={handleUpdateHabit}
+          />
+        </Suspense>
       )}
 
       {deletingHabit && (
-        <DeleteHabitDialog
-          key={deletingHabit.id}
-          habit={deletingHabit}
-          isOpen={Boolean(deletingHabit)}
-          onClose={() => setDeletingHabit(null)}
-          onDelete={handleDelete}
-        />
+        <Suspense fallback={null}>
+          <DeleteHabitDialog
+            key={deletingHabit.id}
+            habit={deletingHabit}
+            isOpen={Boolean(deletingHabit)}
+            onClose={() => setDeletingHabit(null)}
+            onDelete={handleDeleteHabit}
+          />
+        </Suspense>
       )}
 
       {reminderHabit && (
-        <ReminderModal
-          key={`reminder-${reminderHabit.id}`}
-          isOpen={Boolean(reminderHabit)}
-          onClose={() => setReminderHabit(null)}
-          habitName={reminderHabit.name}
-          reminder={remindersMap[reminderHabit.id] || null}
-          onSave={handleReminderSave}
-          onDelete={handleReminderDelete}
-        />
+        <Suspense fallback={null}>
+          <ReminderModal
+            key={`reminder-${reminderHabit.id}`}
+            isOpen={Boolean(reminderHabit)}
+            onClose={() => setReminderHabit(null)}
+            habitName={reminderHabit.name}
+            reminder={remindersMap[reminderHabit.id] || null}
+            onSave={handleReminderSave}
+            onDelete={handleReminderDelete}
+          />
+        </Suspense>
       )}
     </div>
   );

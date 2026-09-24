@@ -1,6 +1,7 @@
 import supabase from '../lib/supabase';
 import { syncUserTimezone } from './authService';
 import { getLocalDateString } from '../utils/streaks/dateUtils';
+import { invalidateLeaderboardCache } from './leaderboardService';
 
 /**
  * Translates raw database/Supabase errors into clean, user-friendly messages.
@@ -31,8 +32,41 @@ const getFriendlyDbErrorMessage = (error) => {
   return 'We could not complete that request. Please try again.';
 };
 
+let cachedUser = null;
+let cachedUserExpiry = 0;
+
+let cachedHabits = null;
+let cachedHabitsTime = 0;
+let inFlightHabitsPromise = null;
+
+let cachedCheckins = null;
+let cachedCheckinsTime = 0;
+let inFlightCheckinsPromise = null;
+
+const CACHE_TTL_MS = 20000; // 20 seconds short-lived cache
+
+export const invalidateHabitsCache = () => {
+  cachedHabits = null;
+  cachedHabitsTime = 0;
+  inFlightHabitsPromise = null;
+};
+
+export const invalidateCheckinsCache = () => {
+  cachedCheckins = null;
+  cachedCheckinsTime = 0;
+  inFlightCheckinsPromise = null;
+};
+
+export const clearCachedUser = () => {
+  cachedUser = null;
+  cachedUserExpiry = 0;
+  invalidateHabitsCache();
+  invalidateCheckinsCache();
+};
+
 /**
  * Verifies that the Supabase client is initialized and returns the authenticated user.
+ * Caches in-memory for 5 seconds to eliminate repetitive storage reads across concurrent calls.
  */
 const getAuthenticatedUser = async () => {
   if (!supabase) {
@@ -41,16 +75,25 @@ const getAuthenticatedUser = async () => {
     );
   }
 
+  const now = Date.now();
+  if (cachedUser && now < cachedUserExpiry) {
+    return cachedUser;
+  }
+
   const { data: { session }, error } = await supabase.auth.getSession();
   if (error || !session?.user) {
     const { data: refreshed } = await supabase.auth.refreshSession().catch(() => ({ data: {} }));
     if (refreshed?.session?.user) {
-      return refreshed.session.user;
+      cachedUser = refreshed.session.user;
+      cachedUserExpiry = now + 5000;
+      return cachedUser;
     }
     throw new Error('You must be logged in to perform this action.');
   }
 
-  return session.user;
+  cachedUser = session.user;
+  cachedUserExpiry = now + 5000;
+  return cachedUser;
 };
 
 /**
@@ -86,19 +129,39 @@ const withClockSkewRetry = async (queryFn, retries = 2) => {
 
 /**
  * Fetches all habits for the authenticated user.
+ * Features in-memory caching and concurrent request deduplication.
  */
-export const getHabits = async () => {
+export const getHabits = async ({ force = false } = {}) => {
   const user = await getAuthenticatedUser();
+  const now = Date.now();
 
-  const data = await withClockSkewRetry(() =>
-    supabase
-      .from('habits')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-  );
+  if (!force && cachedHabits && now - cachedHabitsTime < CACHE_TTL_MS) {
+    return cachedHabits;
+  }
 
-  return data || [];
+  if (inFlightHabitsPromise) {
+    return inFlightHabitsPromise;
+  }
+
+  inFlightHabitsPromise = (async () => {
+    try {
+      const data = await withClockSkewRetry(() =>
+        supabase
+          .from('habits')
+          .select('id, name, created_at, updated_at, user_id')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+      );
+
+      cachedHabits = data || [];
+      cachedHabitsTime = Date.now();
+      return cachedHabits;
+    } finally {
+      inFlightHabitsPromise = null;
+    }
+  })();
+
+  return inFlightHabitsPromise;
 };
 
 /**
@@ -115,7 +178,7 @@ export const createHabit = async (name) => {
     throw new Error('Habit name must be 50 characters or less.');
   }
 
-  return await withClockSkewRetry(() =>
+  const result = await withClockSkewRetry(() =>
     supabase
       .from('habits')
       .insert({
@@ -125,6 +188,9 @@ export const createHabit = async (name) => {
       .select()
       .single()
   );
+
+  invalidateHabitsCache();
+  return result;
 };
 
 /**
@@ -141,7 +207,7 @@ export const updateHabit = async (id, name) => {
     throw new Error('Habit name must be 50 characters or less.');
   }
 
-  return await withClockSkewRetry(() =>
+  const result = await withClockSkewRetry(() =>
     supabase
       .from('habits')
       .update({
@@ -153,6 +219,9 @@ export const updateHabit = async (id, name) => {
       .select()
       .single()
   );
+
+  invalidateHabitsCache();
+  return result;
 };
 
 /**
@@ -169,24 +238,46 @@ export const deleteHabit = async (id) => {
       .eq('user_id', user.id)
   );
 
+  invalidateHabitsCache();
+  invalidateCheckinsCache();
   return true;
 };
 
 /**
  * Fetches all check-ins belonging to the authenticated user.
+ * Features in-memory caching and concurrent request deduplication.
  */
-export const getAllUserCheckins = async () => {
+export const getAllUserCheckins = async ({ force = false } = {}) => {
   const user = await getAuthenticatedUser();
+  const now = Date.now();
 
-  const data = await withClockSkewRetry(() =>
-    supabase
-      .from('habit_checkins')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('check_in_date', { ascending: false })
-  );
+  if (!force && cachedCheckins && now - cachedCheckinsTime < CACHE_TTL_MS) {
+    return cachedCheckins;
+  }
 
-  return data || [];
+  if (inFlightCheckinsPromise) {
+    return inFlightCheckinsPromise;
+  }
+
+  inFlightCheckinsPromise = (async () => {
+    try {
+      const data = await withClockSkewRetry(() =>
+        supabase
+          .from('habit_checkins')
+          .select('id, habit_id, check_in_date, status, user_id')
+          .eq('user_id', user.id)
+          .order('check_in_date', { ascending: false })
+      );
+
+      cachedCheckins = data || [];
+      cachedCheckinsTime = Date.now();
+      return cachedCheckins;
+    } finally {
+      inFlightCheckinsPromise = null;
+    }
+  })();
+
+  return inFlightCheckinsPromise;
 };
 
 /**
@@ -202,7 +293,7 @@ export const upsertTodayCheckin = async (habitId, status) => {
     throw new Error('Invalid status. Status must be "completed" or "missed".');
   }
 
-  return await withClockSkewRetry(() =>
+  const result = await withClockSkewRetry(() =>
     supabase
       .from('habit_checkins')
       .upsert(
@@ -217,6 +308,10 @@ export const upsertTodayCheckin = async (habitId, status) => {
       .select()
       .single()
   );
+
+  invalidateCheckinsCache();
+  invalidateLeaderboardCache();
+  return result;
 };
 
 /**
@@ -236,6 +331,8 @@ export const deleteTodayCheckin = async (habitId) => {
       .eq('check_in_date', today)
   );
 
+  invalidateCheckinsCache();
+  invalidateLeaderboardCache();
   return true;
 };
 
@@ -248,7 +345,7 @@ export const getHabitById = async (id) => {
   return await withClockSkewRetry(() =>
     supabase
       .from('habits')
-      .select('*')
+      .select('id, name, created_at, updated_at, user_id')
       .eq('id', id)
       .eq('user_id', user.id)
       .maybeSingle()
@@ -264,7 +361,7 @@ export const getHabitCheckins = async (habitId) => {
   const data = await withClockSkewRetry(() =>
     supabase
       .from('habit_checkins')
-      .select('*')
+      .select('id, habit_id, check_in_date, status, user_id')
       .eq('habit_id', habitId)
       .eq('user_id', user.id)
       .order('check_in_date', { ascending: false })

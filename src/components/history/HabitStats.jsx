@@ -100,7 +100,7 @@ export default function HabitStats({
                   </span>
                 )}
               </div>
-              <p className="mt-1 text-[11px] text-zinc-400 dark:text-zinc-500 leading-tight">
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400 leading-normal">
                 {stat.description}
               </p>
             </div>

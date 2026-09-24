@@ -209,22 +209,45 @@ export const onAuthStateChange = (callback) => {
   return supabase.auth.onAuthStateChange(callback);
 };
 
+let lastSyncedTimezone = null;
+let syncTimezonePromise = null;
+
+export const clearCachedTimezone = () => {
+  lastSyncedTimezone = null;
+  syncTimezonePromise = null;
+};
+
 /**
  * Stores the browser's IANA time zone for server-side date calculations.
+ * Features in-memory caching and in-flight deduplication to avoid redundant network round-trips.
  */
 export const syncUserTimezone = async () => {
   if (!supabase || typeof Intl === 'undefined') return;
 
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  if (!timeZone) return;
+  if (!timeZone || lastSyncedTimezone === timeZone) return;
 
-  const { error } = await supabase.rpc('set_my_time_zone', {
-    requested_time_zone: timeZone,
-  });
-
-  if (error) {
-    console.warn('[Quitmark] Unable to synchronize user time zone:', error);
+  if (syncTimezonePromise) {
+    return syncTimezonePromise;
   }
+
+  syncTimezonePromise = (async () => {
+    try {
+      const { error } = await supabase.rpc('set_my_time_zone', {
+        requested_time_zone: timeZone,
+      });
+
+      if (error) {
+        console.warn('[Quitmark] Unable to synchronize user time zone:', error);
+      } else {
+        lastSyncedTimezone = timeZone;
+      }
+    } finally {
+      syncTimezonePromise = null;
+    }
+  })();
+
+  return syncTimezonePromise;
 };
 
 /**

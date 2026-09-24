@@ -29,11 +29,21 @@ export const getNotificationPreferences = (userId = null) => {
     if (stored) {
       return { ...defaultPreferences, ...JSON.parse(stored) };
     }
+
+    // If browser/device permission is already granted on this device, default enabled to true
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      return { ...defaultPreferences, enabled: true };
+    }
   } catch (error) {
     console.error('Failed to parse notification preferences', error);
   }
 
   return defaultPreferences;
+};
+
+export const isNotificationsGloballyEnabled = (userId = null) => {
+  const prefs = getNotificationPreferences(userId);
+  return Boolean(prefs?.enabled);
 };
 
 export const saveNotificationPreferences = (newPrefs, userId = null) => {

@@ -1,8 +1,28 @@
 import supabase from '../lib/supabase';
 
+let cachedUser = null;
+let cachedUserExpiry = 0;
+
+let cachedReminders = null;
+let cachedRemindersTime = 0;
+let inFlightRemindersPromise = null;
+const REMINDER_CACHE_TTL_MS = 20000;
+
+export const invalidateRemindersCache = () => {
+  cachedReminders = null;
+  cachedRemindersTime = 0;
+  inFlightRemindersPromise = null;
+};
+
+export const clearCachedReminderUser = () => {
+  cachedUser = null;
+  cachedUserExpiry = 0;
+  invalidateRemindersCache();
+};
+
 /**
  * Verifies that the Supabase client is initialized and returns the authenticated user.
- * (Mirrors habitService pattern)
+ * (Caches in-memory for 5 seconds to eliminate duplicate auth storage reads across concurrent queries)
  */
 const getAuthenticatedUser = async () => {
   if (!supabase) {
@@ -11,16 +31,25 @@ const getAuthenticatedUser = async () => {
     );
   }
 
+  const now = Date.now();
+  if (cachedUser && now < cachedUserExpiry) {
+    return cachedUser;
+  }
+
   const { data: { session }, error } = await supabase.auth.getSession();
   if (error || !session?.user) {
     const { data: refreshed } = await supabase.auth.refreshSession().catch(() => ({ data: {} }));
     if (refreshed?.session?.user) {
-      return refreshed.session.user;
+      cachedUser = refreshed.session.user;
+      cachedUserExpiry = now + 5000;
+      return cachedUser;
     }
     throw new Error('You must be logged in to perform this action.');
   }
 
-  return session.user;
+  cachedUser = session.user;
+  cachedUserExpiry = now + 5000;
+  return cachedUser;
 };
 
 /**
@@ -64,7 +93,7 @@ export const getReminder = async (habitId) => {
   return await withClockSkewRetry(() =>
     supabase
       .from('habit_reminders')
-      .select('*')
+      .select('id, habit_id, user_id, enabled, reminder_time, repeat_type, repeat_days, updated_at')
       .eq('habit_id', habitId)
       .maybeSingle()
   );
@@ -72,18 +101,38 @@ export const getReminder = async (habitId) => {
 
 /**
  * Fetches all reminders for the current user.
+ * Features in-memory caching and request deduplication.
  */
-export const getAllReminders = async () => {
+export const getAllReminders = async ({ force = false } = {}) => {
   const user = await getAuthenticatedUser();
+  const now = Date.now();
 
-  const data = await withClockSkewRetry(() =>
-    supabase
-      .from('habit_reminders')
-      .select('*')
-      .eq('user_id', user.id)
-  );
+  if (!force && cachedReminders && now - cachedRemindersTime < REMINDER_CACHE_TTL_MS) {
+    return cachedReminders;
+  }
 
-  return data || [];
+  if (inFlightRemindersPromise) {
+    return inFlightRemindersPromise;
+  }
+
+  inFlightRemindersPromise = (async () => {
+    try {
+      const data = await withClockSkewRetry(() =>
+        supabase
+          .from('habit_reminders')
+          .select('id, habit_id, user_id, enabled, reminder_time, repeat_type, repeat_days, updated_at')
+          .eq('user_id', user.id)
+      );
+
+      cachedReminders = data || [];
+      cachedRemindersTime = Date.now();
+      return cachedReminders;
+    } finally {
+      inFlightRemindersPromise = null;
+    }
+  })();
+
+  return inFlightRemindersPromise;
 };
 
 /**
@@ -93,7 +142,7 @@ export const getAllReminders = async () => {
 export const upsertReminder = async (habitId, { enabled, reminderTime, repeatType, repeatDays }) => {
   const user = await getAuthenticatedUser();
 
-  return await withClockSkewRetry(() =>
+  const result = await withClockSkewRetry(() =>
     supabase
       .from('habit_reminders')
       .upsert(
@@ -111,6 +160,9 @@ export const upsertReminder = async (habitId, { enabled, reminderTime, repeatTyp
       .select()
       .single()
   );
+
+  invalidateRemindersCache();
+  return result;
 };
 
 /**
@@ -127,6 +179,7 @@ export const deleteReminder = async (habitId) => {
       .eq('user_id', user.id)
   );
 
+  invalidateRemindersCache();
   return true;
 };
 

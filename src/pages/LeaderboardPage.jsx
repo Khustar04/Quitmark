@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { Trophy, Flame, AlertCircle, RefreshCw } from 'lucide-react';
 import gsap from 'gsap';
-import { getLeaderboard } from '../services/leaderboardService';
+import { getLeaderboard, subscribeToLeaderboard } from '../services/leaderboardService';
 
 export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState([]);
@@ -14,30 +14,57 @@ export default function LeaderboardPage() {
 
   const containerRef = useRef(null);
   const headerRef = useRef(null);
-  const isFetchingRef = useRef(false);
 
-  const fetchLeaderboard = useCallback(async () => {
-    if (isFetchingRef.current) return;
-    isFetchingRef.current = true;
-    
+  const fetchLeaderboard = useCallback(async ({ force = false } = {}) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await getLeaderboard(50);
-      setLeaderboard(data);
+      const data = await getLeaderboard(50, { force });
+      setLeaderboard(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Leaderboard fetch error:', err);
-      setError('Something went wrong while loading the leaderboard.');
-      setLeaderboard([]); // Clear stale data on error
+      console.error('[Quitmark] Leaderboard fetch error:', err);
+      setError(err?.message || 'Something went wrong while loading the leaderboard.');
     } finally {
       setLoading(false);
-      isFetchingRef.current = false;
     }
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchLeaderboard();
+    let isCancelled = false;
+
+    async function loadInitial() {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getLeaderboard(50);
+        if (!isCancelled) {
+          setLeaderboard(Array.isArray(data) ? data : []);
+        }
+      } catch (err) {
+        if (!isCancelled) {
+          console.error('[Quitmark] Leaderboard initial load error:', err);
+          setError(err?.message || 'Something went wrong while loading the leaderboard.');
+        }
+      } finally {
+        if (!isCancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadInitial();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  // Subscribe to real-time changes
+  useEffect(() => {
+    const unsubscribe = subscribeToLeaderboard(() => {
+      void fetchLeaderboard({ force: true });
+    });
+    return () => unsubscribe();
   }, [fetchLeaderboard]);
 
   // GSAP animation for entrance
@@ -92,7 +119,7 @@ export default function LeaderboardPage() {
 
         <button
           type="button"
-          onClick={() => !loading && fetchLeaderboard()}
+          onClick={() => !loading && fetchLeaderboard({ force: true })}
           disabled={loading}
           className="self-start sm:self-auto p-2.5 rounded-xl border border-zinc-200 dark:border-[#232936] bg-white dark:bg-[#0D0F17] text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-300 dark:hover:border-[#334155] transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
           title="Refresh leaderboard"
@@ -126,7 +153,7 @@ export default function LeaderboardPage() {
             </p>
             <button
               type="button"
-              onClick={() => fetchLeaderboard()}
+              onClick={() => fetchLeaderboard({ force: true })}
               className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold transition-all hover:bg-zinc-800 dark:hover:bg-zinc-100 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500"
             >
               Retry

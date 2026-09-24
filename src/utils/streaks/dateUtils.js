@@ -101,3 +101,75 @@ export const getLastNWeeksDays = (weeks = 12) => {
 
   return days;
 };
+
+/**
+ * Calculates standard ISO 8601 week number (1 - 53)
+ */
+export const getISOWeekNumber = (d = new Date()) => {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
+};
+
+/**
+ * Returns array of 7 day objects for the week containing `todayDateStr` (Monday to Sunday)
+ */
+export const getWeekDates = (todayDateStr) => {
+  const effectiveToday = todayDateStr || getLocalDateString();
+  const [year, month, day] = effectiveToday.split('-').map(Number);
+  const targetDate = new Date(year, month - 1, day);
+
+  // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  const dayOfWeek = targetDate.getDay();
+  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+
+  const monday = new Date(year, month - 1, day + diffToMonday);
+  const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+    const dateStr = getLocalDateString(d);
+
+    days.push({
+      date: d,
+      dateStr,
+      label: DAY_LABELS[i],
+      isToday: dateStr === effectiveToday,
+      isFuture: dateStr > effectiveToday,
+      isPast: dateStr < effectiveToday,
+    });
+  }
+
+  return days;
+};
+
+/**
+ * Determines the visual theme for a day in the weekly rhythm view.
+ *
+ * Rules:
+ * - 'future': Day is in the future.
+ * - 'empty': Total habits is 0 (no habits to track).
+ * - 'green': All habits completed (completed >= totalHabits && totalHabits > 0).
+ * - 'yellow': Partial completion (0 < completed < totalHabits).
+ * - 'pending': Today with 0 completed (day is active/in-progress, not missed).
+ * - 'red': Past day with 0 completed (missed day).
+ *
+ * @param {Object} params
+ * @param {number} [params.totalHabits=0]
+ * @param {number} [params.completed=0]
+ * @param {boolean} [params.isToday=false]
+ * @param {boolean} [params.isFuture=false]
+ * @returns {'future' | 'empty' | 'green' | 'yellow' | 'pending' | 'red'}
+ */
+export const getDayTheme = ({ totalHabits = 0, completed = 0, isToday = false, isFuture = false } = {}) => {
+  if (isFuture) return 'future';
+  if (totalHabits === 0) return 'empty';
+  if (completed >= totalHabits) return 'green';
+  if (completed > 0) return 'yellow';
+  if (isToday) return 'pending';
+  return 'red';
+};
+

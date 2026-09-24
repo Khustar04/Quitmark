@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { Menu, X, LogOut, LayoutDashboard, User, Settings, Trophy } from 'lucide-react';
+import { Menu, X, LogOut, LayoutDashboard, Trophy } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import NotificationBellPopover from './NotificationBellPopover';
 import { signOut } from '../../services/authService';
@@ -76,6 +76,7 @@ export default function Navbar() {
   };
 
   const isNative = isNativeApp();
+  const userInitial = (user?.user_metadata?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U').toUpperCase();
 
   return (
     <header
@@ -84,7 +85,7 @@ export default function Navbar() {
           ? 'max(env(safe-area-inset-top, 0px), 28px)'
           : 'max(env(safe-area-inset-top, 0px), 0px)',
       }}
-      className="sticky top-0 z-50 w-full border-b border-zinc-200 dark:border-white/10 bg-white/95 dark:bg-zinc-900/60 backdrop-blur-md transition-all shadow-sm dark:shadow-[0_4px_30px_rgba(0,0,0,0.2)] transform-gpu"
+      className="w-full border-b border-zinc-200/80 dark:border-zinc-800/80 bg-white/95 dark:bg-[#090A0F]/95 backdrop-blur-md transition-colors shadow-sm"
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Brand Logo - Links to /dashboard when authenticated, / when unauthenticated */}
@@ -92,33 +93,52 @@ export default function Navbar() {
           to={user ? '/dashboard' : '/'}
           className="flex items-center gap-2.5 font-semibold text-lg tracking-tight text-zinc-900 dark:text-white group focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 rounded-md"
           onClick={() => setMobileMenuOpen(false)}
-          aria-label={user ? 'Quitmark Dashboard' : 'Quitmark Home'}
+          aria-label={user ? 'Quitmark Home' : 'Quitmark'}
         >
-          <img src="/logo.png" alt="Quitmark Logo" className="w-7 h-7 object-contain group-hover:scale-105 transition-transform" />
-          <span>Quitmark</span>
+          <img src="/logo.png" alt="Quitmark Logo" className="w-8 h-8 rounded-xl object-contain group-hover:scale-105 transition-transform" />
+          <div className="flex flex-col">
+            <span className="font-bold leading-tight">Quitmark</span>
+            <span className="text-[10px] font-normal text-zinc-500 dark:text-zinc-400 tracking-tight leading-none">
+              Small Habits. Big Changes.
+            </span>
+          </div>
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-5">
+        <nav className="hidden md:flex items-center gap-4">
           {user ? (
-            /* Authenticated Navigation: Dashboard + Theme Toggle + Profile + Logout */
+            /* Authenticated Navigation: Home + Habits + Leaderboard + Goals + Bell + Theme + Profile + Logout */
             <>
               <Link
                 to="/dashboard"
-                className={`inline-flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                className={`inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${
                   location.pathname === '/dashboard'
                     ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold'
                     : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-900'
                 }`}
-                aria-label="Dashboard"
+                aria-label="Home"
               >
                 <LayoutDashboard className="w-4 h-4" />
-                <span>Dashboard</span>
+                <span>Home</span>
+              </Link>
+
+              <Link
+                to="/habits"
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                className={`inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${
+                  location.pathname === '/habits'
+                    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-900'
+                }`}
+                aria-label="Habits"
+              >
+                <span>Habits</span>
               </Link>
 
               <Link
                 to="/leaderboard"
-                className={`inline-flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${
+                className={`inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${
                   location.pathname === '/leaderboard'
                     ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold'
                     : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-900'
@@ -129,6 +149,20 @@ export default function Navbar() {
                 <span>Leaderboard</span>
               </Link>
 
+              <Link
+                to="/goals"
+                className={`inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${
+                  location.pathname === '/goals'
+                    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-900'
+                }`}
+                aria-label="Goals"
+              >
+                <span>Goals</span>
+              </Link>
+
+              <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-800 my-auto" />
+
               <NotificationBellPopover
                 isOpen={notificationOpen}
                 onToggle={handleToggleNotification}
@@ -136,31 +170,18 @@ export default function Navbar() {
               />
               <ThemeToggle />
 
-              {/* Profile Display */}
-              <div
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800"
-                title={user.email}
-              >
-                <div className="w-6 h-6 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                  <User className="w-3.5 h-3.5" />
-                </div>
-                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate max-w-[120px]">
-                  {user.email?.split('@')[0] || 'User'}
-                </span>
-              </div>
-
-              {/* Settings Link (Toggle) */}
+              {/* Profile Avatar Button -> Navigates to /settings */}
               <Link
-                to={location.pathname === '/settings' ? '/dashboard' : '/settings'}
-                className={`flex items-center justify-center w-9 h-9 rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 select-none ${
+                to="/settings"
+                className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
                   location.pathname === '/settings'
-                    ? 'text-emerald-600 dark:text-emerald-400 border-emerald-500/40 bg-emerald-500/10'
-                    : 'bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-emerald-500/40 hover:text-emerald-500'
+                    ? 'bg-emerald-500 text-zinc-950 ring-2 ring-emerald-400 ring-offset-2 dark:ring-offset-[#090A0F]'
+                    : 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/25'
                 }`}
-                title={location.pathname === '/settings' ? 'Close Settings' : 'Settings'}
-                aria-label={location.pathname === '/settings' ? 'Close Settings' : 'Settings'}
+                title="Profile & Settings"
+                aria-label="Profile & Settings"
               >
-                <Settings className="w-4 h-4" />
+                {userInitial}
               </Link>
 
               <button
@@ -215,6 +236,20 @@ export default function Navbar() {
             />
           )}
           <ThemeToggle />
+          {user && (
+            <Link
+              to="/settings"
+              className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                location.pathname === '/settings'
+                  ? 'bg-emerald-500 text-zinc-950 ring-2 ring-emerald-400 ring-offset-2 dark:ring-offset-[#090A0F]'
+                  : 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/25'
+              }`}
+              title="Profile & Settings"
+              aria-label="Profile & Settings"
+            >
+              {userInitial}
+            </Link>
+          )}
           {/* Mobile Menu Button (Only for unauthenticated users; authenticated mobile users use MobileBottomNav) */}
           {!user && (
             <button

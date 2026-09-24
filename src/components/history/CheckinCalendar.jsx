@@ -30,9 +30,9 @@ export default function CheckinCalendar({ checkins = [] }) {
   return (
     <div className="rounded-2xl border border-zinc-200 dark:border-[#232936] bg-white dark:bg-[#0D0F17] p-5 sm:p-7 space-y-6 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-2 pb-4 border-b border-zinc-100 dark:border-[#232936]">
-        <Activity className="w-5 h-5 text-emerald-500" />
-        <h2 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">
+      <div className="flex items-center gap-2.5 pb-4 border-b border-zinc-100 dark:border-[#232936]">
+        <Activity className="w-5 h-5 text-emerald-500 shrink-0 self-center translate-y-[0.5px]" aria-hidden="true" />
+        <h2 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight leading-none">
           Contribution Heatmap
         </h2>
       </div>
@@ -59,7 +59,7 @@ export default function CheckinCalendar({ checkins = [] }) {
               const isToday = dateStr === todayStr;
               const isSelected = selectedDay?.dateStr === dateStr;
 
-              let cellStyles = 'bg-zinc-100/80 dark:bg-[#131722] border border-zinc-200/50 dark:border-[#232936]';
+              let cellStyles = 'bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-300/70 dark:border-zinc-700/60';
               
               if (status === 'completed') {
                 cellStyles = 'bg-emerald-500 border border-emerald-400/50 shadow-sm shadow-emerald-500/10';

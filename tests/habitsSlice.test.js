@@ -26,6 +26,7 @@ const initialState = {
   items: [],
   checkinsByHabit: {},
   loading: false,
+  initialized: false,
   checkinLoading: {},
   error: null,
 };
@@ -50,6 +51,7 @@ test('habitsSlice: setHabits populates items and clears error', () => {
   const state = habitsReducer(initialState, setHabits(habits));
   assert.equal(state.items.length, 2);
   assert.equal(state.loading, false);
+  assert.equal(state.initialized, true);
   assert.equal(state.error, null);
 });
 
@@ -283,6 +285,7 @@ test('habitsSlice: setError sets error and disables loading', () => {
   const state = habitsReducer(loadingState, setError('Database error'));
   assert.equal(state.error, 'Database error');
   assert.equal(state.loading, false);
+  assert.equal(state.initialized, true);
 });
 
 test('habitsSlice: clearError resets error', () => {
@@ -302,4 +305,27 @@ test('habitsSlice: resetHabitsState returns to initial state', () => {
   state = habitsReducer(state, resetHabitsState());
 
   assert.deepStrictEqual(state, initialState);
+});
+
+test('habitsSlice: initialized flag lifecycle distinguishes uninitialized from empty', () => {
+  // Fresh state starts uninitialized
+  let state = habitsReducer(undefined, { type: 'unknown' });
+  assert.equal(state.initialized, false);
+  assert.equal(state.loading, false);
+  assert.deepStrictEqual(state.items, []);
+
+  // When loading starts
+  state = habitsReducer(state, setLoading(true));
+  assert.equal(state.initialized, false);
+  assert.equal(state.loading, true);
+
+  // When empty data finishes loading, initialized flips to true
+  state = habitsReducer(state, setHabits([]));
+  assert.equal(state.initialized, true);
+  assert.equal(state.loading, false);
+  assert.deepStrictEqual(state.items, []);
+
+  // On logout/reset, initialized flips back to false
+  state = habitsReducer(state, resetHabitsState());
+  assert.equal(state.initialized, false);
 });

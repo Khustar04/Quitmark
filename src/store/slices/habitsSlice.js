@@ -4,6 +4,7 @@ const initialState = {
   items: [],
   checkinsByHabit: {}, // { [habitId]: Array<Checkin> }
   loading: false,
+  initialized: false, // Distinguishes initial uninitialized loading from a genuine empty list
   checkinLoading: {}, // { [habitId]: boolean }
   error: null,
 };
@@ -15,6 +16,7 @@ export const habitsSlice = createSlice({
     setHabits: (state, action) => {
       state.items = action.payload || [];
       state.loading = false;
+      state.initialized = true;
       state.error = null;
     },
     addHabit: (state, action) => {
@@ -104,6 +106,7 @@ export const habitsSlice = createSlice({
     setError: (state, action) => {
       state.error = action.payload;
       state.loading = false;
+      state.initialized = true;
     },
     clearError: (state) => {
       state.error = null;

@@ -13,7 +13,7 @@ export default function CheckinLegend() {
     {
       id: 'no-record',
       label: 'No Record',
-      render: <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm bg-zinc-100/80 dark:bg-[#131722] border border-zinc-200/50 dark:border-[#232936]" />
+      render: <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-300/70 dark:border-zinc-700/60" />
     },
     {
       id: 'pending',

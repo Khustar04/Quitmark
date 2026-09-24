@@ -27,15 +27,15 @@ export default function HabitHistoryPage() {
 
   const { handleCheckin } = useCheckin();
 
-  const [loading, setLoading] = useState(true);
+  // Rely strictly on Redux as the single source of truth
+  const habit = habits.find((h) => h.id === habitId) || null;
+  const checkins = checkinsByHabit[habitId] || [];
+
+  const [loading, setLoading] = useState(!habit);
   const [notFound, setNotFound] = useState(false);
   const [pageError, setPageError] = useState(null);
 
   const containerRef = useRef(null);
-
-  // Rely strictly on Redux as the single source of truth
-  const habit = habits.find((h) => h.id === habitId) || null;
-  const checkins = checkinsByHabit[habitId] || [];
 
   // Load from Supabase if not in Redux or when visiting directly
   useEffect(() => {

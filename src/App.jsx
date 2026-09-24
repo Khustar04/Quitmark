@@ -13,17 +13,26 @@ import { App as CapApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
 import supabase from './lib/supabase';
+import { clearCachedUser } from './services/habitService';
+import { clearCachedReminderUser } from './services/reminderService';
+import { invalidateGoalsCache } from './services/goalService';
+import { invalidateLeaderboardCache } from './services/leaderboardService';
+import { clearCachedTimezone } from './services/authService';
 
-import RootLayout from './layouts/RootLayout';
-import LandingPage from './pages/LandingPage';
-import LoginPage from './pages/LoginPage';
-import SignupPage from './pages/SignupPage';
-import DashboardPage from './pages/DashboardPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import PublicAuthRoute from './routes/PublicAuthRoute';
 import LoadingScreen from './components/common/LoadingScreen';
+import DashboardSkeleton from './components/skeletons/DashboardSkeleton';
 
-// Code-split secondary routes to shrink initial bundle size
+import RootLayout from './layouts/RootLayout';
+
+// Lazy load all pages on demand for optimal initial load speed
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+
+// Lazy load secondary routes on demand
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const SignupPage = lazy(() => import('./pages/SignupPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const HabitHistoryPage = lazy(() => import('./pages/HabitHistoryPage'));
@@ -32,6 +41,8 @@ const FaqPage = lazy(() => import('./pages/FaqPage'));
 const ReportBugPage = lazy(() => import('./pages/ReportBugPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage'));
+const GoalsPage = lazy(() => import('./pages/GoalsPage'));
+const HabitsPage = lazy(() => import('./pages/HabitsPage'));
 
 export default function App() {
   const dispatch = useDispatch();
@@ -43,6 +54,11 @@ export default function App() {
       setActiveUserId(null);
       setNotificationUser(null);
       clearNotifiedStreakHabitIds();
+      clearCachedUser();
+      clearCachedReminderUser();
+      invalidateGoalsCache();
+      invalidateLeaderboardCache();
+      clearCachedTimezone();
       dispatch(clearAuth());
       dispatch(resetHabitsState());
       // Clean up push subscription on logout
@@ -184,8 +200,17 @@ export default function App() {
 
             {/* Protected Routes (redirect to /login if unauthenticated) */}
             <Route element={<ProtectedRoute />}>
-              <Route path="dashboard" element={<DashboardPage />} />
+              <Route
+                path="dashboard"
+                element={(
+                  <Suspense fallback={<DashboardSkeleton />}>
+                    <DashboardPage />
+                  </Suspense>
+                )}
+              />
+              <Route path="habits" element={<HabitsPage />} />
               <Route path="leaderboard" element={<LeaderboardPage />} />
+              <Route path="goals" element={<GoalsPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="habits/:habitId" element={<HabitHistoryPage />} />
             </Route>

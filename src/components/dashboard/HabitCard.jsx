@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { Flame, Check, X, Edit2, Trash2, RotateCcw, Loader2, Calendar, Bell, BellRing } from 'lucide-react';
 import gsap from 'gsap';
@@ -16,7 +16,7 @@ const formatTime12h = (time24) => {
   return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
 };
 
-export default function HabitCard({
+function HabitCard({
   habit,
   checkins = [],
   onCheckin,
@@ -34,7 +34,10 @@ export default function HabitCard({
   const todayStatus = todayRecord ? todayRecord.status : 'pending';
 
   // Compute live progress summary
-  const summary = calculateHabitSummary(checkins, todayDateStr);
+  const summary = useMemo(
+    () => calculateHabitSummary(checkins, todayDateStr),
+    [checkins, todayDateStr]
+  );
   const { currentStreak, longestStreak } = summary;
   const hasActiveStreak = currentStreak > 0;
 
@@ -115,20 +118,20 @@ export default function HabitCard({
         <div className="absolute top-0 left-6 right-6 h-[2px] bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent rounded-full pointer-events-none" />
       )}
 
-      {/* --- HIERARCHY 1: Habit Name --- */}
+      {/* --- HIERARCHY 1: Habit Name (H2 maintains proper heading outline after H1) --- */}
       <div className="mb-4">
-        <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight leading-snug break-words">
+        <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight leading-snug break-words">
           {habit.name}
-        </h3>
+        </h2>
       </div>
 
-      {/* --- HIERARCHY 2: Current Streak --- */}
-      <div className="mb-5 flex items-center gap-3">
+      {/* --- HIERARCHY 2: Current Streak (Unified baseline and centered alignment) --- */}
+      <div className="mb-5 flex items-center gap-3.5">
         <div
           className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
             hasActiveStreak
               ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 shadow-sm shadow-emerald-500/10'
-              : 'bg-zinc-100 dark:bg-zinc-900 border border-zinc-200/80 dark:border-[#232936] text-zinc-400 dark:text-zinc-500'
+              : 'bg-zinc-100 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 text-zinc-400 dark:text-zinc-500'
           }`}
         >
           <Flame
@@ -137,23 +140,24 @@ export default function HabitCard({
                 ? 'fill-emerald-500/30 text-emerald-500 animate-pulse'
                 : 'text-zinc-400 dark:text-zinc-500'
             }`}
+            aria-hidden="true"
           />
         </div>
-        <div>
-          <div className="flex items-baseline gap-1.5">
+        <div className="flex flex-col justify-center">
+          <div className="flex items-baseline gap-2 leading-none">
             <span
               ref={streakRef}
-              className="text-4xl font-extrabold font-mono text-zinc-900 dark:text-white"
+              className="text-3xl sm:text-4xl font-extrabold font-mono text-zinc-900 dark:text-zinc-100 tracking-tight"
             >
               {currentStreak}
             </span>
-            <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+            <span className="text-sm font-semibold text-zinc-600 dark:text-zinc-400 lowercase">
               day streak
             </span>
           </div>
-          <div className="text-xs font-mono text-zinc-500 dark:text-zinc-400">
+          <span className="text-xs font-mono text-zinc-500 dark:text-zinc-400 mt-1">
             Best: {longestStreak} {longestStreak === 1 ? 'day' : 'days'}
-          </div>
+          </span>
         </div>
       </div>
 
@@ -244,14 +248,14 @@ export default function HabitCard({
         )}
       </div>
 
-      {/* --- HIERARCHY 4: Secondary actions --- */}
-      <div className="flex items-center justify-between pt-3 border-t border-zinc-100/60 dark:border-[#232936]/60">
-        <div className="flex items-center gap-1">
+      {/* --- HIERARCHY 4: Secondary actions (Adequate 12px touch spacing & accessible targets) --- */}
+      <div className="flex items-center justify-between pt-3 border-t border-zinc-100/60 dark:border-zinc-800/60">
+        <div className="flex items-center gap-3">
           <Link
             to={`/habits/${habit.id}`}
-            className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
-            <Calendar className="w-3.5 h-3.5" />
+            <Calendar className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Progress</span>
           </Link>
 
@@ -260,48 +264,53 @@ export default function HabitCard({
             <button
               type="button"
               onClick={() => onReminderClick(habit)}
-              className={`inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 cursor-pointer ${
                 hasReminder
-                  ? 'text-amber-600 dark:text-amber-400 hover:bg-amber-500/10'
-                  : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900'
+                  ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20'
+                  : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
               }`}
-              title={hasReminder ? `Reminder: ${formatTime12h(reminder.reminder_time)}` : 'Set reminder'}
-              aria-label={hasReminder ? `Reminder set for ${formatTime12h(reminder.reminder_time)}` : 'Set reminder'}
+              title={hasReminder ? `Reminder set for ${formatTime12h(reminder.reminder_time)}. Click to edit.` : 'Set reminder'}
+              aria-label={hasReminder ? `Reminder set for ${formatTime12h(reminder.reminder_time)}` : `Set reminder for ${habit.name}`}
             >
               {hasReminder ? (
                 <>
-                  <BellRing className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{formatTime12h(reminder.reminder_time)}</span>
+                  <BellRing className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                  <span>Remind</span>
+                  <span className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                    {formatTime12h(reminder.reminder_time)}
+                  </span>
                 </>
               ) : (
                 <>
-                  <Bell className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Remind</span>
+                  <Bell className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                  <span>Remind</span>
                 </>
               )}
             </button>
           )}
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => onEdit(habit)}
-            className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-            aria-label="Edit"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 cursor-pointer"
+            aria-label={`Edit ${habit.name}`}
           >
-            <Edit2 className="w-4 h-4" />
+            <Edit2 className="w-4 h-4" aria-hidden="true" />
           </button>
           <button
             type="button"
             onClick={() => onDelete(habit)}
-            className="p-1.5 rounded-md text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-            aria-label="Delete"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 cursor-pointer"
+            aria-label={`Delete ${habit.name}`}
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
       </div>
     </div>
   );
 }
+
+export default memo(HabitCard);

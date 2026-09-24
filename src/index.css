@@ -11,6 +11,45 @@
   }
 }
 
+@layer components {
+  /* Shared Goals controls keep the flow visually consistent and guarantee
+     touch-friendly interactive targets without changing the app-wide system. */
+  .goal-button-primary {
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-bold text-slate-950 shadow-md shadow-emerald-500/20 transition-all duration-200 hover:bg-emerald-400 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#5af0b3] dark:text-[#003825] dark:hover:bg-[#4de1a5];
+  }
+
+  .goal-button-secondary {
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/[0.1] dark:bg-[#161a1f] dark:text-slate-200 dark:hover:border-white/[0.2];
+  }
+
+  .goal-button-quiet {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-xl text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:text-[#85948b] dark:hover:bg-white/[0.06] dark:hover:text-white sm:text-sm;
+  }
+
+  .goal-button-danger {
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  /* Utility to hide native scrollbar while retaining scroll functionality */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Prevent browser autofill from painting ugly grey/yellow backgrounds over styled inputs */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill {
+  -webkit-text-fill-color: inherit !important;
+  -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 @keyframes auroraFloat {
   0% {
     transform: translate(0px, 0px) scale(1);
@@ -81,4 +120,17 @@
   .animate-particle-3 {
     animation: none !important;
   }
+}
+
+/* Subtle mesh ambient background from Stitch */
+.bg-radial-ambient {
+  background: radial-gradient(circle at 18% 12%, rgba(0, 229, 153, 0.07) 0%, transparent 40%),
+              radial-gradient(circle at 85% 80%, rgba(16, 185, 129, 0.05) 0%, transparent 45%);
+}
+
+/* Radial SVG Progress Animation setup */
+.progress-circle {
+  transition: stroke-dashoffset 0.8s ease-in-out;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
 }

@@ -41,11 +41,11 @@ export default function Footer() {
               <Link
                 to={user ? '/dashboard' : '/'}
                 className="inline-flex items-center gap-2.5 font-bold tracking-tight text-zinc-900 dark:text-white group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-md text-lg"
-                aria-label="Habit Tracker Home"
+                aria-label="Quitmark Home"
               >
                 <img
                   src="/logo.png"
-                  alt="Habit Tracker Logo"
+                  alt="Quitmark Logo"
                   className="w-6 h-6 object-contain group-hover:scale-105 transition-transform"
                 />
                 <span className="font-extrabold uppercase tracking-wider text-base sm:text-lg">

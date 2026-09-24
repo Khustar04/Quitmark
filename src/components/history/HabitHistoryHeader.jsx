@@ -13,18 +13,18 @@ export default function HabitHistoryHeader({
       {/* Back to Dashboard Navigation */}
       <div>
         <Link
-          to="/dashboard"
+          to="/habits"
           className="inline-flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-lg px-1 py-0.5 -ml-1"
         >
           <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-          <span>Back to Dashboard</span>
+          <span>Back to Habits</span>
         </Link>
       </div>
 
       {/* Habit Title & Subtitle */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div className="space-y-1">
-          <span className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-mono">
+          <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
             Quit Goal History
           </span>
           <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-white break-words">
@@ -35,25 +35,25 @@ export default function HabitHistoryHeader({
           </p>
         </div>
 
-        {/* Quick Highlights Pill Badges */}
+        {/* Quick Highlights Badges */}
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold shadow-sm">
-            <Flame className="w-3.5 h-3.5 fill-emerald-500/20 text-emerald-500" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm font-semibold shadow-xs">
+            <Flame className="w-4 h-4 fill-emerald-500/20 text-emerald-500 shrink-0" aria-hidden="true" />
             <span>{currentStreak} Day Streak</span>
           </div>
 
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-[#131722] border border-zinc-200 dark:border-[#232936] text-zinc-700 dark:text-zinc-300 text-xs font-semibold">
-            <Award className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-zinc-100 dark:bg-[#131722] border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs sm:text-sm font-semibold">
+            <Award className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" aria-hidden="true" />
             <span>Best: {longestStreak}d</span>
           </div>
 
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-[#131722] border border-zinc-200 dark:border-[#232936] text-zinc-700 dark:text-zinc-300 text-xs font-semibold">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-zinc-100 dark:bg-[#131722] border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs sm:text-sm font-semibold">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" aria-hidden="true" />
             <span>{completedCount} Completed</span>
           </div>
 
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-[#131722] border border-zinc-200 dark:border-[#232936] text-zinc-700 dark:text-zinc-300 text-xs font-semibold">
-            <Percent className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-zinc-100 dark:bg-[#131722] border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs sm:text-sm font-semibold">
+            <Percent className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" aria-hidden="true" />
             <span>{consistencyPct}</span>
           </div>
         </div>

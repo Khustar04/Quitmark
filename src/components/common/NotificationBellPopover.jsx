@@ -26,6 +26,7 @@ export default function NotificationBellPopover({
   isOpen: controlledIsOpen,
   onToggle: controlledOnToggle,
   onClose: controlledOnClose,
+  triggerClassName = '',
 }) {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const isControlled = typeof controlledIsOpen === 'boolean';
@@ -171,13 +172,17 @@ export default function NotificationBellPopover({
         }
         aria-expanded={isOpen}
         aria-haspopup="true"
-        className={`relative flex items-center justify-center w-9 h-9 rounded-full border transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${
-          isOpen
-            ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-sm'
-            : unreadCount > 0
-            ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
-            : 'border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:border-zinc-300 dark:hover:border-zinc-700'
-        }`}
+        className={
+          triggerClassName
+            ? `${triggerClassName} relative`
+            : `relative flex items-center justify-center w-9 h-9 rounded-full border transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${
+                isOpen
+                  ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                  : unreadCount > 0
+                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
+                  : 'border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:border-zinc-300 dark:hover:border-zinc-700'
+              }`
+        }
       >
         <Bell className="w-4 h-4" />
 

@@ -4,7 +4,7 @@ import { ArrowRight, Download, Smartphone } from 'lucide-react';
 const ANDROID_DOWNLOAD_URL =
   'https://github.com/Khustar04/Quitmark/releases/latest/download/Quitmark.apk';
 
-export default function FinalCTA() {
+export default function CallToAction() {
   return (
     <section className="final-cta-section max-w-3xl mx-auto px-4 py-16 sm:py-24 text-center">
       <div className="final-cta-card rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 shadow-sm dark:shadow-none p-8 sm:p-12 transition-colors">

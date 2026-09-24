@@ -1,12 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import gsap from 'gsap';
 import Hero from '../components/landing/Hero';
 import ProductPreview from '../components/landing/ProductPreview';
 import HowItWorks from '../components/landing/HowItWorks';
 import StreakSection from '../components/landing/StreakSection';
-import FinalCTA from '../components/landing/FinalCTA';
+import CallToAction from '../components/landing/CallToAction';
 
 export default function LandingPage() {
   const containerRef = useRef(null);
@@ -27,8 +26,16 @@ export default function LandingPage() {
 
     if (prefersReducedMotion) return;
 
-    // Scoped GSAP animations with proper cleanup and clearProps to prevent frozen opacity
-    const ctx = gsap.context(() => {
+    let active = true;
+    let ctx;
+
+    // GSAP is presentation-only. Load it after the landing page is visible so
+    // a cold WebView launch is not held up by animation code.
+    void import('gsap').then(({ default: gsap }) => {
+      if (!active) return;
+
+      // Scoped animations with proper cleanup and clearProps to prevent frozen opacity.
+      ctx = gsap.context(() => {
       gsap.fromTo(
         '.hero-badge',
         { opacity: 0, y: -10 },
@@ -76,9 +83,13 @@ export default function LandingPage() {
         { opacity: 0, y: 20 },
         { opacity: 1, y: 0, duration: 0.6, delay: 0.8, ease: 'power2.out', clearProps: 'all' }
       );
-    }, containerRef);
+      }, containerRef);
+    });
 
-    return () => ctx.revert();
+    return () => {
+      active = false;
+      ctx?.revert();
+    };
   }, []);
 
   return (
@@ -124,7 +135,7 @@ export default function LandingPage() {
         <ProductPreview />
         <HowItWorks />
         <StreakSection />
-        <FinalCTA />
+        <CallToAction />
       </div>
     </div>
   );

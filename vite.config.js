@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      injectRegister: 'auto',
+      injectRegister: 'script-defer',
       manifest: false, // Use the existing public/manifest.json from Task 23
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
@@ -49,5 +49,31 @@ export default defineConfig({
       }
     })
   ],
+  build: {
+    target: 'es2020',
+    cssCodeSplit: true,
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') || id.includes('node_modules/react-router-dom/')) {
+            return 'vendor-react';
+          }
+          if (id.includes('node_modules/@reduxjs') || id.includes('node_modules/react-redux')) {
+            return 'vendor-redux';
+          }
+          if (id.includes('node_modules/@supabase')) {
+            return 'vendor-supabase';
+          }
+          if (id.includes('node_modules/gsap')) {
+            return 'vendor-gsap';
+          }
+          if (id.includes('node_modules/lucide-react')) {
+            return 'vendor-icons';
+          }
+        },
+      },
+    },
+  },
   envPrefix: 'SUPABASE_',
 })

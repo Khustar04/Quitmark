@@ -5,8 +5,10 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="dark light" />
-    <meta name="theme-color" content="#10B981" />
-    
+    <!-- Preconnect to Supabase backend API for fast initial handshake -->
+    <link rel="preconnect" href="https://fjhsqtjyncavhlgitthq.supabase.co" crossorigin />
+    <link rel="dns-prefetch" href="https://fjhsqtjyncavhlgitthq.supabase.co" />
+
     <!-- PWA / Web App Manifest -->
     <link rel="manifest" href="/manifest.json" />
     <meta name="description" content="Quitmark - Simple, clean, and engaging habit-tracking to quit unwanted habits through daily streaks." />
@@ -18,9 +20,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Quitmark" />
     
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <title>Quitmark | Build Streaks, Break Habits</title>
   </head>
   <body class="bg-zinc-950 text-zinc-100 min-h-screen antialiased selection:bg-emerald-500 selection:text-white">
