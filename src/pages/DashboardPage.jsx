@@ -13,6 +13,7 @@ import {
   Trophy,
   Sun,
   Moon,
+  ChevronRight,
 } from 'lucide-react';
 
 import {
@@ -28,6 +29,7 @@ import {
   deleteReminder as deleteReminderApi,
 } from '../services/reminderService';
 import { getLeaderboard, subscribeToLeaderboard } from '../services/leaderboardService';
+import { getGoals, calculateGoalStats } from '../services/goalService';
 import {
   setHabits,
   addHabit,
@@ -120,6 +122,40 @@ const DEFAULT_RITUALS = [
     defaultStatus: 'in_progress',
     frequency: 'daily',
   },
+];
+
+const DAILY_AFFIRMATIONS = [
+  'Consistency turns small steps into big results.',
+  'You do not rise to the level of your goals. You fall to the level of your systems.',
+  'Small daily improvements over time lead to stunning results.',
+  'Discipline is choosing between what you want now and what you want most.',
+  'Every action you take is a vote for the type of person you wish to become.',
+  'Focus on who you want to become, not just what you want to achieve.',
+  'The secret of your future is hidden in your daily routine.',
+  'Success is the sum of small efforts, repeated day in and day out.',
+  'Motivation gets you started. Habit is what keeps you going.',
+  'Do something today that your future self will thank you for.',
+  'Mastering yourself is true power.',
+  'Don’t count the days, make the days count.',
+  'Great things are done by a series of small things brought together.',
+  'Clarity leads to focus, and focus leads to results.',
+  'Energy flows where attention goes.',
+  'Habits are the compound interest of self-improvement.',
+  'Stay committed to your decisions, but flexible in your approach.',
+  'Patience and persistence will bring you through.',
+  'The best way to predict the future is to create it.',
+  'Excellence is not an act, but a habit.',
+  'One small positive thought in the morning can change your whole day.',
+  'Your habits shape your identity, and your identity shapes your habits.',
+  'Make each day your masterpiece.',
+  'Progress, not perfection.',
+  'Action is the foundational key to all success.',
+  'Win the morning, win the day.',
+  'Continuous improvement is better than delayed perfection.',
+  'A river cuts through rock, not because of its power, but because of its persistence.',
+  'Start where you are. Use what you have. Do what you can.',
+  'Build streaks, break limits.',
+  'Every day is a fresh opportunity to reinforce your discipline.',
 ];
 
 const EMPTY_CHECKINS = Object.freeze([]);
@@ -331,6 +367,19 @@ export default function DashboardPage() {
     return [];
   }, [leaderboardUsers, userId, userName, user, isUsingDemo]);
 
+  // Latest Goal state for featuring active cycle goal
+  const [latestGoal, setLatestGoal] = useState(null);
+
+  const latestGoalStats = useMemo(() => {
+    if (!latestGoal) return null;
+    return calculateGoalStats(latestGoal, habits, checkinsByHabit, todayDateStr);
+  }, [latestGoal, habits, checkinsByHabit, todayDateStr]);
+
+  const dailyAffirmation = useMemo(() => {
+    const day = new Date().getDate();
+    return DAILY_AFFIRMATIONS[day % DAILY_AFFIRMATIONS.length];
+  }, []);
+
   const containerRef = useRef(null);
   const requestIdRef = useRef(0);
 
@@ -345,11 +394,12 @@ export default function DashboardPage() {
       }
       dispatch(clearError());
 
-      const [habitsRes, checkinsRes, remindersRes, leaderboardRes] = await Promise.allSettled([
+      const [habitsRes, checkinsRes, remindersRes, leaderboardRes, goalsRes] = await Promise.allSettled([
         getHabits(),
         getAllUserCheckins(),
         getAllReminders(),
         getLeaderboard(5),
+        userId ? getGoals(userId) : Promise.resolve([]),
       ]);
 
       if (currentReq !== requestIdRef.current) return;
@@ -374,6 +424,13 @@ export default function DashboardPage() {
 
       if (leaderboardRes.status === 'fulfilled') {
         setLeaderboardUsers(leaderboardRes.value || []);
+      }
+
+      if (goalsRes.status === 'fulfilled' && Array.isArray(goalsRes.value)) {
+        const userGoals = goalsRes.value;
+        const activeGoals = userGoals.filter((g) => g.status === 'active' || !g.status);
+        const latest = activeGoals[0] || userGoals[0] || null;
+        setLatestGoal(latest);
       }
     } catch (err) {
       dispatch(setError(err.message || 'Failed to load habit data.'));
@@ -894,37 +951,103 @@ export default function DashboardPage() {
             />
 
             {/* Active Cycle Goal & Sprint Card */}
-            <div className="rounded-2xl bg-[#141a1e] border border-white/[0.06] p-4 mt-3 text-left shadow-sm">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-1.5 text-slate-400">
-                  <Zap className="w-3.5 h-3.5 text-[#00E599]" />
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                    Active Cycle Goal
+            {latestGoal ? (
+              <Link
+                to="/goals"
+                className="block rounded-2xl bg-[#141a1e] border border-white/[0.06] p-4 mt-3 text-left shadow-sm active:scale-[0.99] transition-all group"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5 text-slate-400">
+                    <Zap className="w-3.5 h-3.5 text-[#00E599]" />
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 group-hover:text-[#00E599] transition-colors">
+                      {latestGoal.status === 'completed' ? 'Completed Goal' : 'Active Cycle Goal'}
+                    </span>
+                    <ChevronRight className="w-3 h-3 text-slate-400 group-hover:translate-x-0.5 group-hover:text-[#00E599] transition-all shrink-0" />
+                  </div>
+                  <span className="font-mono text-xs font-bold text-[#00E599]">
+                    {latestGoalStats?.isCompleted && (latestGoalStats?.progressPercentage ?? 0) >= 100
+                      ? '100% Complete'
+                      : `Day ${Math.min(
+                          (latestGoalStats?.daysElapsed ?? 0) + 1,
+                          latestGoalStats?.totalDays || Number(latestGoal.duration_days) || 30
+                        )} of ${latestGoalStats?.totalDays || Number(latestGoal.duration_days) || 30}`}
                   </span>
                 </div>
-                <span className="font-mono text-xs font-bold text-[#00E599]">Day 14 of 30</span>
+                <p className="text-sm font-semibold text-white truncate">
+                  {latestGoal.name}
+                </p>
+                <div className="w-full h-1.5 rounded-full bg-[#1f282e] overflow-hidden mt-2.5">
+                  <div
+                    style={{ width: `${Math.min(100, Math.max(0, latestGoalStats?.progressPercentage ?? 0))}%` }}
+                    className="h-full bg-[#00E599] rounded-full transition-all duration-500"
+                  />
+                </div>
+                <div className="flex items-center justify-between mt-2.5 text-[11px] text-slate-400">
+                  <span className="flex items-center gap-1 text-emerald-400">
+                    <span>🔥</span> {latestGoalStats?.completedDaysCount ?? 0} days logged
+                  </span>
+                  <span>{latestGoalStats?.daysRemaining ?? 0} days remaining</span>
+                </div>
+              </Link>
+            ) : isUsingDemo ? (
+              <Link
+                to="/goals"
+                className="block rounded-2xl bg-[#141a1e] border border-white/[0.06] p-4 mt-3 text-left shadow-sm active:scale-[0.99] transition-all group"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5 text-slate-400">
+                    <Zap className="w-3.5 h-3.5 text-[#00E599]" />
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 group-hover:text-[#00E599] transition-colors">
+                      Active Cycle Goal
+                    </span>
+                    <ChevronRight className="w-3 h-3 text-slate-400 group-hover:translate-x-0.5 group-hover:text-[#00E599] transition-all shrink-0" />
+                  </div>
+                  <span className="font-mono text-xs font-bold text-[#00E599]">Day 14 of 30</span>
+                </div>
+                <p className="text-sm font-semibold text-white">
+                  Deep Work &amp; Wellness 30-Day Sprint
+                </p>
+                <div className="w-full h-1.5 rounded-full bg-[#1f282e] overflow-hidden mt-2.5">
+                  <div
+                    style={{ width: '46%' }}
+                    className="h-full bg-[#00E599] rounded-full transition-all duration-500"
+                  />
+                </div>
+                <div className="flex items-center justify-between mt-2.5 text-[11px] text-slate-400">
+                  <span className="flex items-center gap-1 text-emerald-400">
+                    <span>🔥</span> 14-day streak active
+                  </span>
+                  <span>16 days remaining</span>
+                </div>
+              </Link>
+            ) : (
+              <div className="rounded-2xl bg-[#141a1e] border border-white/[0.06] p-4 mt-3 text-left shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5 text-slate-400">
+                    <Zap className="w-3.5 h-3.5 text-[#00E599]" />
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                      Active Cycle Goal
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-500">No active goal</span>
+                </div>
+                <p className="text-xs text-slate-400 leading-snug mb-3">
+                  Set a 30 or 60-day sprint goal to supercharge your consistency.
+                </p>
+                <Link
+                  to="/goals"
+                  className="inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-medium bg-[#00E599]/10 hover:bg-[#00E599]/20 text-[#00E599] border border-[#00E599]/20 transition-all w-full"
+                >
+                  <span>+ Set a Goal</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
-              <p className="text-sm font-semibold text-white">
-                Deep Work &amp; Wellness 30-Day Sprint
-              </p>
-              <div className="w-full h-1.5 rounded-full bg-[#1f282e] overflow-hidden mt-2.5">
-                <div
-                  style={{ width: '46%' }}
-                  className="h-full bg-[#00E599] rounded-full transition-all duration-500"
-                />
-              </div>
-              <div className="flex items-center justify-between mt-2.5 text-[11px] text-slate-400">
-                <span className="flex items-center gap-1 text-emerald-400">
-                  <span>🔥</span> 14-day streak active
-                </span>
-                <span>16 days remaining</span>
-              </div>
-            </div>
+            )}
 
             {/* Motivational Quote Card */}
             <div className="rounded-2xl bg-[#141a1e] border border-white/[0.06] p-4 text-center mt-3 mb-2">
               <p className="text-xs text-slate-400 italic leading-relaxed">
-                &ldquo;Consistency turns small steps into big results.&rdquo;
+                &ldquo;{dailyAffirmation}&rdquo;
               </p>
             </div>
           </>
@@ -1305,28 +1428,104 @@ export default function DashboardPage() {
                     </div>
 
                     <blockquote className="text-sm text-slate-800 dark:text-[#e1e2e7] italic font-normal leading-relaxed">
-                      &ldquo;Consistency turns small steps into big results.&rdquo;
+                      &ldquo;{dailyAffirmation}&rdquo;
                     </blockquote>
 
                     {/* Active Cycle Goal */}
-                    <div className="pt-2 border-t border-slate-100 dark:border-[#272a2d] flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                          Active Cycle Goal
-                        </span>
-                        <span className="font-mono text-xs text-emerald-500 dark:text-[#5af0b3] font-semibold">
-                          Day 14 of 30
-                        </span>
-                      </div>
+                    {latestGoal ? (
+                      <Link
+                        to="/goals"
+                        className="group pt-2.5 border-t border-slate-100 dark:border-[#272a2d] flex flex-col gap-1.5 transition-colors hover:opacity-95 block"
+                        title="Click to view and manage goals"
+                      >
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 group-hover:text-emerald-500 dark:group-hover:text-[#5af0b3] transition-colors truncate">
+                              {latestGoal.status === 'completed' ? 'Completed Goal' : 'Active Cycle Goal'}
+                            </span>
+                            <ChevronRight className="w-3 h-3 text-slate-400 group-hover:translate-x-0.5 group-hover:text-emerald-500 dark:group-hover:text-[#5af0b3] transition-all shrink-0" />
+                          </div>
+                          <span className="font-mono text-xs text-emerald-500 dark:text-[#5af0b3] font-semibold shrink-0">
+                            {latestGoalStats?.isCompleted && (latestGoalStats?.progressPercentage ?? 0) >= 100
+                              ? '100% Complete'
+                              : `Day ${Math.min(
+                                  (latestGoalStats?.daysElapsed ?? 0) + 1,
+                                  latestGoalStats?.totalDays || Number(latestGoal.duration_days) || 30
+                                )} of ${latestGoalStats?.totalDays || Number(latestGoal.duration_days) || 30}`}
+                          </span>
+                        </div>
 
-                      <div className="w-full h-1.5 rounded-full bg-slate-200 dark:bg-[#323538] overflow-hidden">
-                        <div className="h-full bg-emerald-500 dark:bg-[#34d399] rounded-full w-[46%] transition-all duration-500" />
-                      </div>
+                        <div className="w-full h-1.5 rounded-full bg-slate-200 dark:bg-[#323538] overflow-hidden">
+                          <div
+                            className="h-full bg-emerald-500 dark:bg-[#34d399] rounded-full transition-all duration-500"
+                            style={{
+                              width: `${Math.min(100, Math.max(0, latestGoalStats?.progressPercentage ?? 0))}%`,
+                            }}
+                          />
+                        </div>
 
-                      <span className="text-[11px] text-slate-500 dark:text-[#85948b] mt-0.5">
-                        Deep Work &amp; Wellness 30-Day Sprint
-                      </span>
-                    </div>
+                        <div className="flex items-center justify-between text-[11px] mt-0.5">
+                          <span className="text-slate-500 dark:text-[#85948b] group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors truncate pr-2 font-medium">
+                            {latestGoal.name}
+                          </span>
+                          <span className="font-mono font-medium text-emerald-600 dark:text-[#34d399] shrink-0">
+                            {latestGoalStats?.progressPercentage ?? 0}%
+                          </span>
+                        </div>
+                      </Link>
+                    ) : isUsingDemo ? (
+                      <Link
+                        to="/goals"
+                        className="group pt-2.5 border-t border-slate-100 dark:border-[#272a2d] flex flex-col gap-1.5 transition-colors hover:opacity-95 block"
+                        title="Click to explore and set goals"
+                      >
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 group-hover:text-emerald-500 dark:group-hover:text-[#5af0b3] transition-colors">
+                              Active Cycle Goal
+                            </span>
+                            <ChevronRight className="w-3 h-3 text-slate-400 group-hover:translate-x-0.5 group-hover:text-emerald-500 dark:group-hover:text-[#5af0b3] transition-all shrink-0" />
+                          </div>
+                          <span className="font-mono text-xs text-emerald-500 dark:text-[#5af0b3] font-semibold">
+                            Day 14 of 30
+                          </span>
+                        </div>
+
+                        <div className="w-full h-1.5 rounded-full bg-slate-200 dark:bg-[#323538] overflow-hidden">
+                          <div className="h-full bg-emerald-500 dark:bg-[#34d399] rounded-full w-[46%] transition-all duration-500" />
+                        </div>
+
+                        <div className="flex items-center justify-between text-[11px] mt-0.5">
+                          <span className="text-slate-500 dark:text-[#85948b] group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors truncate">
+                            Deep Work &amp; Wellness 30-Day Sprint
+                          </span>
+                          <span className="font-mono font-medium text-emerald-600 dark:text-[#34d399] shrink-0">
+                            46%
+                          </span>
+                        </div>
+                      </Link>
+                    ) : (
+                      <div className="pt-2.5 border-t border-slate-100 dark:border-[#272a2d] flex flex-col gap-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                            Active Cycle Goal
+                          </span>
+                          <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                            No active goal
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-[#85948b] leading-tight">
+                          Set a 30 or 60-day sprint goal to supercharge your consistency.
+                        </p>
+                        <Link
+                          to="/goals"
+                          className="inline-flex items-center justify-between py-1.5 px-3 rounded-lg text-xs font-medium bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-[#5af0b3] border border-emerald-500/20 transition-all group"
+                        >
+                          <span>+ Set a Goal</span>
+                          <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 </div>
               </aside>
