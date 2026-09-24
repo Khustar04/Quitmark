@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import {
   ArrowRight,
@@ -15,6 +15,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { signInWithGoogle } from '../services/authService';
+import { isOnboardingCompleted, setOnboardingCompleted } from '../utils/platform';
 
 /**
  * Clean SVG illustration of gentle rolling green hills with a growing sprout
@@ -87,7 +88,7 @@ function RollingHillsIllustration({ showSun = false }) {
 }
 
 export default function MobileStarterPage() {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(() => (isOnboardingCompleted() ? 5 : 1));
   const [googleLoading, setGoogleLoading] = useState(false);
   const [authError, setAuthError] = useState(null);
 
@@ -104,6 +105,37 @@ export default function MobileStarterPage() {
     }
   }, [initialized, user, navigate]);
 
+  const handleNext = () => {
+    if (step === 4) {
+      setOnboardingCompleted();
+      setStep(5);
+    } else if (step < 5) {
+      setStep((s) => s + 1);
+    }
+  };
+
+  const handleBack = () => {
+    if (step > 1) {
+      setStep((s) => s - 1);
+    }
+  };
+
+  const handleSkip = () => {
+    setOnboardingCompleted();
+    setStep(5);
+  };
+
+  const handleLoginClick = (e) => {
+    if (e) e.preventDefault();
+    setOnboardingCompleted();
+    navigate('/login');
+  };
+
+  const handleEmailSignUp = () => {
+    setOnboardingCompleted();
+    navigate('/signup');
+  };
+
   // Touch swipe support for native mobile feel
   const handleTouchStart = (e) => {
     touchStartXRef.current = e.touches[0].clientX;
@@ -119,10 +151,10 @@ export default function MobileStarterPage() {
     if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY)) {
       if (deltaX < 0) {
         // Swipe Left -> Next
-        if (step < 5) setStep((s) => s + 1);
+        handleNext();
       } else {
         // Swipe Right -> Back
-        if (step > 1) setStep((s) => s - 1);
+        handleBack();
       }
     }
     touchStartXRef.current = null;
@@ -133,6 +165,7 @@ export default function MobileStarterPage() {
     try {
       setGoogleLoading(true);
       setAuthError(null);
+      setOnboardingCompleted();
       await signInWithGoogle();
     } catch (err) {
       setAuthError(err.message || 'Failed to sign in with Google.');
@@ -142,7 +175,7 @@ export default function MobileStarterPage() {
   };
 
   const handleAppleSignIn = () => {
-    // Navigate to signup or show prompt
+    setOnboardingCompleted();
     navigate('/signup');
   };
 
@@ -151,22 +184,37 @@ export default function MobileStarterPage() {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       className="min-h-screen w-full flex flex-col justify-between bg-gradient-to-b from-[#eef9f2] via-[#f7fcf9] to-[#e4f5eb] text-slate-900 select-none overflow-x-hidden relative"
-      style={{ minHeight: '100dvh' }}
+      style={{
+        minHeight: '100dvh',
+        paddingTop: 'env(safe-area-inset-top, 0px)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      }}
     >
       {/* ────────────────────────────────────────────────────────
-          TOP NAVIGATION BAR (Skip Button on Steps 2, 3, 4)
+          TOP NAVIGATION BAR (Skip / Back Button)
       ──────────────────────────────────────────────────────── */}
-      <div className="w-full px-6 pt-5 pb-1 flex items-center justify-between z-20 min-h-[44px]">
+      <div className="w-full px-6 pt-4 pb-1 flex items-center justify-between z-20 min-h-[44px]">
+        {step === 5 ? (
+          <button
+            type="button"
+            onClick={handleBack}
+            className="w-10 h-10 rounded-full border border-slate-200/80 bg-white/80 backdrop-blur-xs shadow-xs hover:bg-white active:scale-95 text-slate-700 flex items-center justify-center transition-all cursor-pointer"
+            aria-label="Go back to tour"
+          >
+            <ChevronLeft className="w-5 h-5 stroke-[2.2]" />
+          </button>
+        ) : (
+          <div className="w-10 h-10" />
+        )}
+
         {step > 1 && step < 5 ? (
-          <div className="w-full flex justify-end">
-            <button
-              type="button"
-              onClick={() => setStep(5)}
-              className="text-sm font-semibold text-slate-500 hover:text-slate-800 active:scale-95 transition-all px-2 py-1"
-            >
-              Skip
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleSkip}
+            className="text-sm font-semibold text-slate-500 hover:text-slate-800 active:scale-95 transition-all px-2.5 py-1.5 rounded-lg"
+          >
+            Skip
+          </button>
         ) : (
           <div className="h-6" />
         )}
@@ -486,7 +534,7 @@ export default function MobileStarterPage() {
               {/* 3. Continue with Email */}
               <button
                 type="button"
-                onClick={() => navigate('/signup')}
+                onClick={handleEmailSignUp}
                 className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-2xl bg-white border border-slate-200 shadow-sm hover:bg-slate-50 active:scale-[0.98] transition-all font-semibold text-slate-700 text-sm cursor-pointer"
               >
                 <Mail className="w-5 h-5 text-[#15803d]" />
@@ -502,9 +550,13 @@ export default function MobileStarterPage() {
             {/* Footer */}
             <p className="text-sm text-slate-600">
               Already have an account?{' '}
-              <Link to="/login" className="font-bold text-[#15803d] hover:underline">
+              <button
+                type="button"
+                onClick={handleLoginClick}
+                className="font-bold text-[#15803d] hover:underline inline cursor-pointer"
+              >
                 Log In
-              </Link>
+              </button>
             </p>
           </div>
         )}
@@ -541,7 +593,7 @@ export default function MobileStarterPage() {
             <div className="w-full flex flex-col items-center">
               <button
                 type="button"
-                onClick={() => setStep(2)}
+                onClick={handleNext}
                 className="w-full max-w-xs py-4 px-6 rounded-full bg-[#1b5e3a] hover:bg-[#14472c] active:scale-[0.98] text-white font-semibold text-base flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/20 transition-all cursor-pointer"
               >
                 <span>Get Started</span>
@@ -550,9 +602,13 @@ export default function MobileStarterPage() {
 
               <p className="text-sm text-slate-600 mt-4">
                 Already have an account?{' '}
-                <Link to="/login" className="font-bold text-[#15803d] hover:underline">
+                <button
+                  type="button"
+                  onClick={handleLoginClick}
+                  className="font-bold text-[#15803d] hover:underline inline cursor-pointer"
+                >
                   Log In
-                </Link>
+                </button>
               </p>
             </div>
           ) : (
@@ -560,7 +616,7 @@ export default function MobileStarterPage() {
             <div className="w-full max-w-xs flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => setStep((s) => Math.max(1, s - 1))}
+                onClick={handleBack}
                 aria-label="Go back"
                 className="w-13 h-13 rounded-full border border-slate-200 bg-white shadow-sm hover:bg-slate-50 active:scale-95 text-slate-700 flex items-center justify-center transition-all cursor-pointer shrink-0"
               >
@@ -569,7 +625,7 @@ export default function MobileStarterPage() {
 
               <button
                 type="button"
-                onClick={() => setStep((s) => s + 1)}
+                onClick={handleNext}
                 className="flex-1 py-4 px-6 rounded-full bg-[#1b5e3a] hover:bg-[#14472c] active:scale-[0.98] text-white font-semibold text-base flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/20 transition-all cursor-pointer"
               >
                 <span>Next</span>

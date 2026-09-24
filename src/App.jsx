@@ -25,9 +25,11 @@ import LoadingScreen from './components/common/LoadingScreen';
 import DashboardSkeleton from './components/skeletons/DashboardSkeleton';
 
 import RootLayout from './layouts/RootLayout';
+import { isMobileApp } from './utils/platform';
 
 // Lazy load all pages on demand for optimal initial load speed
 const LandingPage = lazy(() => import('./pages/LandingPage'));
+const MobileStarterPage = lazy(() => import('./pages/MobileStarterPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 
 // Lazy load secondary routes on demand
@@ -191,7 +193,7 @@ export default function App() {
 
             {/* Public Auth Routes (redirect to /dashboard if already logged in) */}
             <Route element={<PublicAuthRoute />}>
-              <Route index element={<LandingPage />} />
+              <Route index element={isMobileApp() ? <MobileStarterPage /> : <LandingPage />} />
               <Route path="login" element={<LoginPage />} />
               <Route path="signup" element={<SignupPage />} />
               <Route path="forgot-password" element={<ForgotPasswordPage />} />
