@@ -583,8 +583,10 @@ export default function DashboardPage() {
     };
   }, [loading]);
 
-  const handleUpdateHabit = async (id, name) => {
-    const updated = await updateHabit(id, name);
+  const handleUpdateHabit = async (id, nameOrObj, maybeCategory) => {
+    const name = typeof nameOrObj === 'object' ? nameOrObj.name : nameOrObj;
+    const category = typeof nameOrObj === 'object' ? nameOrObj.category : maybeCategory;
+    const updated = await updateHabit(id, name, category);
     dispatch(updateHabitInState(updated));
 
     const existingReminder = remindersMap[id];
@@ -646,9 +648,11 @@ export default function DashboardPage() {
     }
   };
 
-  const handleCreateHabitSubmit = async (name) => {
+  const handleCreateHabitSubmit = async (nameOrObj, maybeCategory) => {
     try {
-      const newHabit = await createHabit(name);
+      const name = typeof nameOrObj === 'object' ? nameOrObj.name : nameOrObj;
+      const category = typeof nameOrObj === 'object' ? nameOrObj.category : maybeCategory;
+      const newHabit = await createHabit(name, category);
       dispatch(addHabit(newHabit));
       setIsCreateOpen(false);
     } catch (err) {
@@ -1234,74 +1238,102 @@ export default function DashboardPage() {
               <section className="stitch-animate-item lg:col-span-8 flex flex-col gap-3">
                 {/* Filter Bar */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-1.5 bg-slate-100 dark:bg-[#0b0e11] rounded-xl border border-slate-200/80 dark:border-transparent">
-                      {/* Category tabs */}
-                      <div className="flex items-center gap-1 flex-wrap">
-                        {['All', 'Learning', 'Health', 'General'].map((cat) => {
-                          const isActive = selectedCategory.toLowerCase() === cat.toLowerCase();
-                          return (
-                            <button
-                              key={cat}
-                              type="button"
-                              onClick={() => setSelectedCategory(cat)}
-                              className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                  {/* Category tabs */}
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {['All', 'Learning', 'Health', 'Mindfulness', 'General'].map((cat) => {
+                      const isActive = selectedCategory.toLowerCase() === cat.toLowerCase();
+                      const count =
+                        cat === 'All'
+                          ? activeHabits.length
+                          : activeHabits.filter(
+                              (h) => (h.category || getHabitCategory(h.name).name).toLowerCase() === cat.toLowerCase()
+                            ).length;
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setSelectedCategory(cat)}
+                          className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                            isActive
+                              ? 'bg-white dark:bg-[#1d2023] text-slate-900 dark:text-[#e1e2e7] shadow-sm'
+                              : 'text-slate-500 dark:text-[#85948b] hover:text-slate-900 dark:hover:text-[#e1e2e7] hover:bg-white/60 dark:hover:bg-[#191c1f]'
+                          }`}
+                        >
+                          <span className="inline-flex items-center gap-1.5">
+                            <span>{cat}</span>
+                            <span
+                              className={`px-1.5 py-0.5 rounded-full text-[11px] font-mono leading-none ${
                                 isActive
-                                  ? 'bg-white dark:bg-[#1d2023] text-slate-900 dark:text-[#e1e2e7] shadow-sm'
-                                  : 'text-slate-500 dark:text-[#85948b] hover:text-slate-900 dark:hover:text-[#e1e2e7] hover:bg-white/60 dark:hover:bg-[#191c1f]'
+                                  ? 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-[#34d399]'
+                                  : 'bg-slate-200/80 dark:bg-white/10 text-slate-600 dark:text-slate-300'
                               }`}
                             >
-                              <span className="inline-flex items-center gap-1.5">
-                                <span>{cat}</span>
-                                {cat === 'All' && (
-                                  <span className="px-1.5 py-0.5 rounded-full text-[11px] font-mono leading-none bg-slate-200/80 dark:bg-white/10 text-slate-600 dark:text-slate-300">
-                                    {activeHabits.length}
-                                  </span>
-                                )}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {/* Right controls: Chronological Sort & View Mode */}
-                      <div className="flex items-center gap-1.5 text-slate-400 dark:text-[#85948b] self-end sm:self-auto">
-                        <button
-                          type="button"
-                          title="Chronological Sort"
-                          className="w-8 h-8 rounded-lg bg-white dark:bg-[#191c1f] hover:bg-slate-200 dark:hover:bg-[#1d2023] flex items-center justify-center transition-colors cursor-pointer"
-                        >
-                          <ArrowUpDown className="w-3.5 h-3.5" />
+                              {count}
+                            </span>
+                          </span>
                         </button>
-                        <button
-                          type="button"
-                          title="Display Compact Mode"
-                          className="w-8 h-8 rounded-lg bg-white dark:bg-[#191c1f] hover:bg-slate-200 dark:hover:bg-[#1d2023] flex items-center justify-center transition-colors cursor-pointer"
-                        >
-                          <AlignJustify className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
+                      );
+                    })}
+                  </div>
 
-                    {/* Habit Rows List */}
-                    <div className="flex flex-col gap-2.5">
-                      {filteredHabits.map((habit) => (
-                        <DashboardHabitRow
-                          key={habit.id}
-                          habit={habit}
-                          checkins={checkinsByHabit[habit.id] || EMPTY_CHECKINS}
-                          overrideCompleted={
-                            isUsingDemo ? demoStatuses[habit.id] === 'completed' : undefined
-                          }
-                          onCheckin={
-                            isUsingDemo ? handleDemoCheckin : handleCheckin
-                          }
-                          onEdit={setEditingHabit}
-                          onDelete={setDeletingHabit}
-                          isCheckingIn={Boolean(checkinLoading[habit.id])}
-                          reminder={remindersMap[habit.id] || null}
-                          onReminderClick={handleReminderClick}
-                        />
-                      ))}
+                  {/* Right controls: Chronological Sort & View Mode */}
+                  <div className="flex items-center gap-1.5 text-slate-400 dark:text-[#85948b] self-end sm:self-auto">
+                    <button
+                      type="button"
+                      title="Chronological Sort"
+                      className="w-8 h-8 rounded-lg bg-white dark:bg-[#191c1f] hover:bg-slate-200 dark:hover:bg-[#1d2023] flex items-center justify-center transition-colors cursor-pointer"
+                    >
+                      <ArrowUpDown className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Display Compact Mode"
+                      className="w-8 h-8 rounded-lg bg-white dark:bg-[#191c1f] hover:bg-slate-200 dark:hover:bg-[#1d2023] flex items-center justify-center transition-colors cursor-pointer"
+                    >
+                      <AlignJustify className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Habit Rows List */}
+                <div className="flex flex-col gap-2.5">
+                  {filteredHabits.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center p-8 rounded-xl bg-white dark:bg-[#191c1f] border border-dashed border-slate-200 dark:border-white/10 text-center">
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        No habits in &ldquo;{selectedCategory}&rdquo; yet
+                      </p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm">
+                        Create or edit a habit and set its category to {selectedCategory} to see it here.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setIsCreateOpen(true)}
+                        className="mt-3.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-[#34d399] border border-emerald-500/20 transition-all cursor-pointer"
+                      >
+                        + Create {selectedCategory !== 'All' ? selectedCategory : ''} Habit
+                      </button>
                     </div>
+                  ) : (
+                    filteredHabits.map((habit) => (
+                      <DashboardHabitRow
+                        key={habit.id}
+                        habit={habit}
+                        checkins={checkinsByHabit[habit.id] || EMPTY_CHECKINS}
+                        overrideCompleted={
+                          isUsingDemo ? demoStatuses[habit.id] === 'completed' : undefined
+                        }
+                        onCheckin={
+                          isUsingDemo ? handleDemoCheckin : handleCheckin
+                        }
+                        onEdit={setEditingHabit}
+                        onDelete={setDeletingHabit}
+                        isCheckingIn={Boolean(checkinLoading[habit.id])}
+                        reminder={remindersMap[habit.id] || null}
+                        onReminderClick={handleReminderClick}
+                      />
+                    ))
+                  )}
+                </div>
               </section>
 
               {/* Right Column Telemetry Widgets (4 Cols) */}
@@ -1543,6 +1575,7 @@ export default function DashboardPage() {
             isOpen={isCreateOpen}
             onClose={() => setIsCreateOpen(false)}
             onCreate={handleCreateHabitSubmit}
+            initialCategory={selectedCategory !== 'All' ? selectedCategory : 'General'}
           />
         </Suspense>
       )}

@@ -101,13 +101,17 @@ export default function HabitsPage() {
     queueMicrotask(() => loadReminders());
   }, [loadData, loadReminders]);
 
-  const handleCreate = async (name) => {
-    const newHabit = await createHabit(name);
+  const handleCreate = async (nameOrObj, maybeCategory) => {
+    const name = typeof nameOrObj === 'object' ? nameOrObj.name : nameOrObj;
+    const category = typeof nameOrObj === 'object' ? nameOrObj.category : maybeCategory;
+    const newHabit = await createHabit(name, category);
     dispatch(addHabit(newHabit));
   };
 
-  const handleUpdate = async (id, name) => {
-    const updated = await updateHabit(id, name);
+  const handleUpdate = async (id, nameOrObj, maybeCategory) => {
+    const name = typeof nameOrObj === 'object' ? nameOrObj.name : nameOrObj;
+    const category = typeof nameOrObj === 'object' ? nameOrObj.category : maybeCategory;
+    const updated = await updateHabit(id, name, category);
     dispatch(updateHabitInState(updated));
 
     const existingReminder = remindersMap[id];

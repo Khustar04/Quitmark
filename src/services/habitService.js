@@ -127,9 +127,41 @@ const withClockSkewRetry = async (queryFn, retries = 2) => {
   }
 };
 
+const CATEGORY_STORAGE_PREFIX = 'quitmark_habit_categories_';
+
+export const getStoredHabitCategories = (userId) => {
+  if (!userId || typeof localStorage === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(`${CATEGORY_STORAGE_PREFIX}${userId}`);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+export const setStoredHabitCategory = (userId, habitId, category) => {
+  if (!userId || !habitId || typeof localStorage === 'undefined') return;
+  try {
+    const map = getStoredHabitCategories(userId);
+    map[habitId] = category;
+    localStorage.setItem(`${CATEGORY_STORAGE_PREFIX}${userId}`, JSON.stringify(map));
+  } catch (e) {
+    console.warn('[Quitmark] Failed to persist habit category locally:', e);
+  }
+};
+
+export const removeStoredHabitCategory = (userId, habitId) => {
+  if (!userId || !habitId || typeof localStorage === 'undefined') return;
+  try {
+    const map = getStoredHabitCategories(userId);
+    delete map[habitId];
+    localStorage.setItem(`${CATEGORY_STORAGE_PREFIX}${userId}`, JSON.stringify(map));
+  } catch {}
+};
+
 /**
  * Fetches all habits for the authenticated user.
- * Features in-memory caching and concurrent request deduplication.
+ * Features in-memory caching, category retrieval, and concurrent request deduplication.
  */
 export const getHabits = async ({ force = false } = {}) => {
   const user = await getAuthenticatedUser();
@@ -145,15 +177,35 @@ export const getHabits = async ({ force = false } = {}) => {
 
   inFlightHabitsPromise = (async () => {
     try {
-      const data = await withClockSkewRetry(() =>
-        supabase
-          .from('habits')
-          .select('id, name, created_at, updated_at, user_id')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-      );
+      let data = null;
+      try {
+        data = await withClockSkewRetry(() =>
+          supabase
+            .from('habits')
+            .select('id, name, category, created_at, updated_at, user_id')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+        );
+      } catch (err) {
+        const msg = (err?.message || '').toLowerCase();
+        if (msg.includes('category') || msg.includes('column') || err?.code === '42703') {
+          data = await withClockSkewRetry(() =>
+            supabase
+              .from('habits')
+              .select('id, name, created_at, updated_at, user_id')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+          );
+        } else {
+          throw err;
+        }
+      }
 
-      cachedHabits = data || [];
+      const storedCategories = getStoredHabitCategories(user.id);
+      cachedHabits = (data || []).map((h) => ({
+        ...h,
+        category: h.category || storedCategories[h.id] || undefined,
+      }));
       cachedHabitsTime = Date.now();
       return cachedHabits;
     } finally {
@@ -165,11 +217,15 @@ export const getHabits = async ({ force = false } = {}) => {
 };
 
 /**
- * Creates a new habit for the authenticated user.
+ * Creates a new habit for the authenticated user with category.
  */
-export const createHabit = async (name) => {
+export const createHabit = async (nameOrData, categoryParam) => {
   const user = await getAuthenticatedUser();
-  const trimmedName = (name || '').trim();
+  const isObj = typeof nameOrData === 'object' && nameOrData !== null;
+  const rawName = isObj ? nameOrData.name : nameOrData;
+  const rawCategory = isObj ? nameOrData.category : categoryParam;
+  const trimmedName = (rawName || '').trim();
+  const category = (rawCategory || 'General').trim() || 'General';
 
   if (!trimmedName) {
     throw new Error('Please enter a habit name.');
@@ -178,27 +234,57 @@ export const createHabit = async (name) => {
     throw new Error('Habit name must be 50 characters or less.');
   }
 
-  const result = await withClockSkewRetry(() =>
-    supabase
-      .from('habits')
-      .insert({
-        name: trimmedName,
-        user_id: user.id,
-      })
-      .select()
-      .single()
-  );
+  let result;
+  try {
+    result = await withClockSkewRetry(() =>
+      supabase
+        .from('habits')
+        .insert({
+          name: trimmedName,
+          category,
+          user_id: user.id,
+        })
+        .select()
+        .single()
+    );
+  } catch (err) {
+    const msg = (err?.message || '').toLowerCase();
+    if (msg.includes('category') || msg.includes('column') || err?.code === '42703') {
+      result = await withClockSkewRetry(() =>
+        supabase
+          .from('habits')
+          .insert({
+            name: trimmedName,
+            user_id: user.id,
+          })
+          .select()
+          .single()
+      );
+    } else {
+      throw err;
+    }
+  }
+
+  const finalHabit = { ...result, category: result?.category || category };
+  if (finalHabit.id) {
+    setStoredHabitCategory(user.id, finalHabit.id, finalHabit.category);
+  }
 
   invalidateHabitsCache();
-  return result;
+  return finalHabit;
 };
 
 /**
- * Renames an existing habit.
+ * Renames and/or recategorizes an existing habit.
  */
-export const updateHabit = async (id, name) => {
+export const updateHabit = async (id, nameOrData, categoryParam) => {
   const user = await getAuthenticatedUser();
-  const trimmedName = (name || '').trim();
+  const isObj = typeof nameOrData === 'object' && nameOrData !== null;
+  const rawName = isObj ? nameOrData.name : nameOrData;
+  const rawCategory = isObj ? nameOrData.category : categoryParam;
+  const trimmedName = (rawName || '').trim();
+  const hasCategory = rawCategory !== undefined && rawCategory !== null;
+  const category = hasCategory ? (rawCategory.trim() || 'General') : undefined;
 
   if (!trimmedName) {
     throw new Error('Please enter a habit name.');
@@ -207,21 +293,56 @@ export const updateHabit = async (id, name) => {
     throw new Error('Habit name must be 50 characters or less.');
   }
 
-  const result = await withClockSkewRetry(() =>
-    supabase
-      .from('habits')
-      .update({
-        name: trimmedName,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .select()
-      .single()
-  );
+  const updatePayload = {
+    name: trimmedName,
+    updated_at: new Date().toISOString(),
+  };
+  if (category) {
+    updatePayload.category = category;
+  }
+
+  let result;
+  try {
+    result = await withClockSkewRetry(() =>
+      supabase
+        .from('habits')
+        .update(updatePayload)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single()
+    );
+  } catch (err) {
+    const msg = (err?.message || '').toLowerCase();
+    if (category && (msg.includes('category') || msg.includes('column') || err?.code === '42703')) {
+      result = await withClockSkewRetry(() =>
+        supabase
+          .from('habits')
+          .update({
+            name: trimmedName,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', id)
+          .eq('user_id', user.id)
+          .select()
+          .single()
+      );
+    } else {
+      throw err;
+    }
+  }
+
+  if (category) {
+    setStoredHabitCategory(user.id, id, category);
+  }
+
+  const finalHabit = {
+    ...result,
+    category: result?.category || category || getStoredHabitCategories(user.id)[id],
+  };
 
   invalidateHabitsCache();
-  return result;
+  return finalHabit;
 };
 
 /**
@@ -238,6 +359,7 @@ export const deleteHabit = async (id) => {
       .eq('user_id', user.id)
   );
 
+  removeStoredHabitCategory(user.id, id);
   invalidateHabitsCache();
   invalidateCheckinsCache();
   return true;

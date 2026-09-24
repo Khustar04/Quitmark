@@ -4,6 +4,7 @@ import { Flame, Check, X, Edit2, Trash2, RotateCcw, Loader2, Calendar, Bell, Bel
 import gsap from 'gsap';
 import { calculateHabitSummary } from '../../utils/progress/calculateHabitSummary';
 import { useLocalDate } from '../../hooks/useLocalDate';
+import { getHabitCategory } from '../../utils/habitCategoryUtils';
 
 /**
  * Formats a "HH:MM:SS" or "HH:MM" time string to 12h display.
@@ -118,11 +119,14 @@ function HabitCard({
         <div className="absolute top-0 left-6 right-6 h-[2px] bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent rounded-full pointer-events-none" />
       )}
 
-      {/* --- HIERARCHY 1: Habit Name (H2 maintains proper heading outline after H1) --- */}
-      <div className="mb-4">
+      {/* --- HIERARCHY 1: Habit Name & Category --- */}
+      <div className="mb-4 flex items-start justify-between gap-2.5">
         <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight leading-snug break-words">
           {habit.name}
         </h2>
+        <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-[#272a2d] text-slate-500 dark:text-slate-400 text-[11px] font-medium tracking-wide shrink-0 mt-1">
+          {habit.category || getHabitCategory(habit.name).name}
+        </span>
       </div>
 
       {/* --- HIERARCHY 2: Current Streak (Unified baseline and centered alignment) --- */}

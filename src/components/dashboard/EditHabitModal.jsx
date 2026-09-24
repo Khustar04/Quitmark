@@ -1,9 +1,39 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, AlertCircle, Loader2 } from 'lucide-react';
+import { X, AlertCircle, Loader2, TrendingUp, BookOpen, Dumbbell, Sparkles } from 'lucide-react';
 import gsap from 'gsap';
+import { getHabitCategory } from '../../utils/habitCategoryUtils';
+
+const HABIT_CATEGORIES = [
+  {
+    id: 'General',
+    label: 'General',
+    icon: TrendingUp,
+    activeClass: 'bg-emerald-500/10 border-emerald-500/40 text-emerald-600 dark:text-[#34d399] font-semibold',
+  },
+  {
+    id: 'Learning',
+    label: 'Learning',
+    icon: BookOpen,
+    activeClass: 'bg-cyan-500/10 border-cyan-500/40 text-cyan-600 dark:text-cyan-300 font-semibold',
+  },
+  {
+    id: 'Health',
+    label: 'Health',
+    icon: Dumbbell,
+    activeClass: 'bg-rose-500/10 border-rose-500/40 text-rose-600 dark:text-rose-300 font-semibold',
+  },
+  {
+    id: 'Mindfulness',
+    label: 'Mindfulness',
+    icon: Sparkles,
+    activeClass: 'bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-300 font-semibold',
+  },
+];
 
 export default function EditHabitModal({ habit, isOpen, onClose, onUpdate }) {
+  const currentCategory = habit?.category || getHabitCategory(habit?.name).name || 'General';
   const [name, setName] = useState(habit?.name || '');
+  const [category, setCategory] = useState(currentCategory);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const modalRef = useRef(null);
@@ -61,7 +91,7 @@ export default function EditHabitModal({ habit, isOpen, onClose, onUpdate }) {
       return;
     }
 
-    if (trimmed === habit.name) {
+    if (trimmed === habit.name && category === currentCategory) {
       onClose();
       return;
     }
@@ -69,7 +99,7 @@ export default function EditHabitModal({ habit, isOpen, onClose, onUpdate }) {
     try {
       setSaving(true);
       setError(null);
-      await onUpdate(habit.id, trimmed);
+      await onUpdate(habit.id, trimmed, category);
       onClose();
     } catch (err) {
       setError(err.message || 'Failed to update habit.');
@@ -142,6 +172,35 @@ export default function EditHabitModal({ habit, isOpen, onClose, onUpdate }) {
             />
           </div>
 
+          {/* Category Selector */}
+          <div>
+            <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+              Category
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {HABIT_CATEGORIES.map((cat) => {
+                const isSelected = category.toLowerCase() === cat.id.toLowerCase();
+                const IconComponent = cat.icon;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setCategory(cat.id)}
+                    disabled={saving}
+                    className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs border transition-all cursor-pointer ${
+                      isSelected
+                        ? cat.activeClass
+                        : 'border-zinc-200 dark:border-[#232936] bg-zinc-50 dark:bg-[#131722] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-300 dark:hover:border-[#334155]'
+                    }`}
+                  >
+                    <IconComponent className="w-3.5 h-3.5 shrink-0" />
+                    <span>{cat.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="flex items-center justify-end gap-3 pt-2">
             <button
               type="button"
@@ -171,3 +230,4 @@ export default function EditHabitModal({ habit, isOpen, onClose, onUpdate }) {
     </div>
   );
 }
+
