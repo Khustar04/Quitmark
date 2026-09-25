@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
 
-export default function AuthLayout({ children, heading, supportingText, onBackAction, hideNavigation = true }) {
+export default function AuthLayout({ children, heading, supportingText }) {
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 p-4 sm:p-6 transition-colors">
       {/* Center Auth Card */}

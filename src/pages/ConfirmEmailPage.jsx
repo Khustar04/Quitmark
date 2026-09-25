@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import gsap from 'gsap';
-import { CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { CheckCircle2, AlertCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import supabase from '../lib/supabase';
 import { clearAuth } from '../store/slices/authSlice';
 import { useDispatch } from 'react-redux';
@@ -103,9 +103,14 @@ export default function ConfirmEmailPage() {
 
   return (
     <div ref={containerRef} className="w-full">
-      <AuthLayout hideNavigation={true}>
+      <AuthLayout>
         <div className="w-full text-center space-y-6">
-          {error ? (
+          {isProcessing ? (
+            <div className="space-y-4 py-8 flex flex-col items-center justify-center">
+              <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">Verifying confirmation...</p>
+            </div>
+          ) : error ? (
             <div className="space-y-5 animate-in fade-in zoom-in-95 duration-300">
               <div className="w-16 h-16 rounded-full bg-red-500/10 text-red-500 border border-red-500/20 mx-auto flex items-center justify-center">
                 <AlertCircle className="w-8 h-8 stroke-[2.2]" />
