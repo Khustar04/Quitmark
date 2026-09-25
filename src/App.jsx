@@ -255,13 +255,15 @@ export default function App() {
             <Route path="*" element={<NotFoundPage />} />
           </Route>
 
-          {/* Authentication & Confirmation Routes (Completely isolated from public website Navbar & Footer) */}
+          {/* Public Email Confirmation Route (isolated, non-protected, never redirects to dashboard) */}
+          <Route path="/confirm-email" element={<ConfirmEmailPage />} />
+
+          {/* Authentication Routes (Redirect to /dashboard if already logged in) */}
           <Route element={<PublicAuthRoute />}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route path="/confirm-email" element={<ConfirmEmailPage />} />
           </Route>
         </Routes>
       </Suspense>
