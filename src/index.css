@@ -111,13 +111,121 @@ textarea:-webkit-autofill {
   animation: particleShimmer 5s ease-in-out infinite 1s;
 }
 
+@keyframes dayOrbFloat1 {
+  0% {
+    transform: translate(0px, 0px) scale(1) rotate(0deg);
+  }
+  33% {
+    transform: translate(40px, -35px) scale(1.14) rotate(4deg);
+  }
+  66% {
+    transform: translate(-25px, 20px) scale(0.96) rotate(-3deg);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes dayOrbFloat2 {
+  0% {
+    transform: translate(0px, 0px) scale(1) rotate(0deg);
+  }
+  33% {
+    transform: translate(-35px, 40px) scale(1.12) rotate(-5deg);
+  }
+  66% {
+    transform: translate(30px, -25px) scale(0.92) rotate(4deg);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes dayOrbFloat3 {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  50% {
+    transform: translate(35px, -30px) scale(1.16);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+@keyframes dayParticleFloat {
+  0% {
+    transform: translateY(0px) scale(0.8);
+    opacity: 0.2;
+  }
+  50% {
+    transform: translateY(-22px) scale(1.25);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(-44px) scale(0.8);
+    opacity: 0.15;
+  }
+}
+
+@keyframes dayMeshPulse {
+  0%, 100% {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.04);
+  }
+}
+
+.animate-day-orb-1 {
+  animation: dayOrbFloat1 13s ease-in-out infinite alternate;
+}
+
+.animate-day-orb-2 {
+  animation: dayOrbFloat2 17s ease-in-out infinite alternate-reverse;
+}
+
+.animate-day-orb-3 {
+  animation: dayOrbFloat3 11s ease-in-out infinite alternate;
+}
+
+.animate-day-particle-1 {
+  animation: dayParticleFloat 5s ease-in-out infinite;
+}
+
+.animate-day-particle-2 {
+  animation: dayParticleFloat 7s ease-in-out infinite 1.5s;
+}
+
+.animate-day-particle-3 {
+  animation: dayParticleFloat 6s ease-in-out infinite 3s;
+}
+
+.animate-day-particle-4 {
+  animation: dayParticleFloat 8s ease-in-out infinite 0.5s;
+}
+
+.animate-day-mesh {
+  animation: dayMeshPulse 9s ease-in-out infinite alternate;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-aurora-1,
   .animate-aurora-2,
   .animate-light-pulse,
   .animate-particle-1,
   .animate-particle-2,
-  .animate-particle-3 {
+  .animate-particle-3,
+  .animate-day-orb-1,
+  .animate-day-orb-2,
+  .animate-day-orb-3,
+  .animate-day-particle-1,
+  .animate-day-particle-2,
+  .animate-day-particle-3,
+  .animate-day-particle-4,
+  .animate-day-mesh {
     animation: none !important;
   }
 }
