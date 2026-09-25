@@ -292,7 +292,7 @@ export default function HabitsPage() {
         />
       ) : (
         /* Habit Cards Grid ONLY */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full min-w-0">
           {habits.map((habit) => (
             <HabitCard
               key={habit.id}

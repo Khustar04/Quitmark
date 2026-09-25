@@ -28,8 +28,8 @@ const STARTER_HABITS = [
     schedule: 'Throughout Day',
     scheduleType: 'clock',
     icon: Droplet,
-    iconBg: 'bg-sky-500/10 border-sky-500/20 text-sky-400',
-    badgeBg: 'bg-sky-500/10 text-sky-400 border-sky-500/25',
+    iconBg: 'bg-sky-500/10 border-sky-500/20 text-sky-600 dark:text-sky-400',
+    badgeBg: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/25',
   },
   {
     id: 'read-book',
@@ -40,8 +40,8 @@ const STARTER_HABITS = [
     schedule: '20 Mins Session',
     scheduleType: 'clock',
     icon: BookOpen,
-    iconBg: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
-    badgeBg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25',
+    iconBg: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400',
+    badgeBg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25',
   },
   {
     id: 'exercise',
@@ -52,8 +52,8 @@ const STARTER_HABITS = [
     schedule: '30 Mins Target',
     scheduleType: 'clock',
     icon: Dumbbell,
-    iconBg: 'bg-amber-500/10 border-amber-500/20 text-amber-400',
-    badgeBg: 'bg-amber-500/10 text-amber-400 border-amber-500/25',
+    iconBg: 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400',
+    badgeBg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25',
   },
   {
     id: 'meditate',
@@ -64,8 +64,8 @@ const STARTER_HABITS = [
     schedule: '10 Mins Silence',
     scheduleType: 'clock',
     icon: Sparkles,
-    iconBg: 'bg-teal-500/10 border-teal-500/20 text-teal-400',
-    badgeBg: 'bg-teal-500/10 text-teal-400 border-teal-500/25',
+    iconBg: 'bg-teal-500/10 border-teal-500/20 text-teal-600 dark:text-teal-400',
+    badgeBg: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/25',
   },
   {
     id: 'morning-walk',
@@ -76,8 +76,8 @@ const STARTER_HABITS = [
     schedule: 'Before 09:00 AM',
     scheduleType: 'sun',
     icon: Footprints,
-    iconBg: 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400',
-    badgeBg: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/25',
+    iconBg: 'bg-cyan-500/10 border-cyan-500/20 text-cyan-600 dark:text-cyan-400',
+    badgeBg: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/25',
   },
   {
     id: 'journaling',
@@ -88,8 +88,8 @@ const STARTER_HABITS = [
     schedule: 'Post Dinner',
     scheduleType: 'moon',
     icon: Tag,
-    iconBg: 'bg-purple-500/10 border-purple-500/20 text-purple-400',
-    badgeBg: 'bg-purple-500/10 text-purple-400 border-purple-500/25',
+    iconBg: 'bg-purple-500/10 border-purple-500/20 text-purple-600 dark:text-purple-400',
+    badgeBg: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/25',
   },
 ];
 
@@ -164,14 +164,14 @@ export default function EmptyHabitsState({
       {/* 1. TOP DASHBOARD EMPTY STATE HERO CARD (From Reference Image 1)           */}
       {/* ========================================================================= */}
       {showHero && (
-        <div className="relative overflow-hidden rounded-3xl bg-[#0c1014] border border-white/[0.07] p-6 sm:p-8 lg:p-10 shadow-2xl">
+        <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-[#0c1014] border border-slate-200/90 dark:border-white/[0.07] p-6 sm:p-8 lg:p-10 shadow-sm dark:shadow-2xl transition-colors">
           {/* Subtle Background Glows */}
-        <div className="absolute -left-12 -top-12 w-72 h-72 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+        <div className="absolute -left-12 -top-12 w-72 h-72 rounded-full bg-emerald-500/5 dark:bg-emerald-500/10 blur-3xl pointer-events-none" />
         <div className="absolute right-0 bottom-0 w-96 h-96 rounded-full bg-teal-500/5 blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row items-center md:items-stretch gap-6 sm:gap-8 lg:gap-12">
           {/* Left Artwork Vessel (Glowing Seedling Sprout Card with DAY 01) */}
-          <div className="w-48 h-56 sm:w-52 sm:h-60 rounded-2xl bg-[#070a0c] border border-white/[0.08] flex flex-col items-center justify-between p-5 relative overflow-hidden shadow-inner shrink-0 group">
+          <div className="w-48 h-56 sm:w-52 sm:h-60 rounded-2xl bg-slate-50 dark:bg-[#070a0c] border border-slate-200/80 dark:border-white/[0.08] flex flex-col items-center justify-between p-5 relative overflow-hidden shadow-inner shrink-0 group transition-colors">
             {/* Ambient Radial Spotlight inside card */}
             <div className="absolute inset-0 bg-radial from-emerald-500/15 via-transparent to-transparent opacity-80" />
 
@@ -179,8 +179,8 @@ export default function EmptyHabitsState({
             <div className="relative z-10 my-auto flex flex-col items-center justify-center">
               {/* Floating vital sparkles */}
               <div className="relative w-28 h-28 flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-emerald-400 absolute -top-1 -left-2 animate-pulse" />
-                <Sparkles className="w-3.5 h-3.5 text-teal-300 absolute top-4 -right-2 animate-pulse delay-300" />
+                <Sparkles className="w-4 h-4 text-emerald-500 dark:text-emerald-400 absolute -top-1 -left-2 animate-pulse" />
+                <Sparkles className="w-3.5 h-3.5 text-teal-500 dark:text-teal-300 absolute top-4 -right-2 animate-pulse delay-300" />
                 
                 {/* Seedling SVG */}
                 <svg
@@ -228,8 +228,8 @@ export default function EmptyHabitsState({
             </div>
 
             {/* DAY 01 Badge at bottom of card */}
-            <div className="relative z-10 px-4 py-1 rounded-full bg-[#10151a] border border-white/[0.08] text-center shadow-xs">
-              <span className="font-mono text-xs font-bold text-emerald-400 tracking-wider">
+            <div className="relative z-10 px-4 py-1 rounded-full bg-white dark:bg-[#10151a] border border-slate-200 dark:border-white/[0.08] text-center shadow-xs transition-colors">
+              <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 tracking-wider">
                 DAY 01
               </span>
             </div>
@@ -239,21 +239,21 @@ export default function EmptyHabitsState({
           <div className="flex-1 flex flex-col justify-between gap-4 text-left">
             <div className="flex flex-col gap-2.5">
               {/* Zero Day Ritual Badge */}
-              <div className="inline-flex items-center gap-2 self-start px-3 py-1 rounded-full bg-[#0d221c] border border-[#144739] text-[#00E599] text-[11px] font-mono font-bold tracking-wider uppercase shadow-xs">
-                <span className="w-2 h-2 rounded-full bg-[#00E599] animate-pulse" />
+              <div className="inline-flex items-center gap-2 self-start px-3 py-1 rounded-full bg-emerald-500/10 dark:bg-[#0d221c] border border-emerald-500/25 dark:border-[#144739] text-emerald-700 dark:text-[#00E599] text-[11px] font-mono font-bold tracking-wider uppercase shadow-xs transition-colors">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-[#00E599] animate-pulse" />
                 <span>ZERO DAY RITUAL • READY TO BEGIN</span>
               </div>
 
               {/* Headline */}
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
                 Let&apos;s Build Your{' '}
-                <span className="text-[#00E599] drop-shadow-[0_0_20px_rgba(0,229,153,0.3)]">
+                <span className="text-emerald-600 dark:text-[#00E599] drop-shadow-[0_0_20px_rgba(0,229,153,0.3)]">
                   Better Tomorrow
                 </span>
               </h2>
 
               {/* Subtitle */}
-              <p className="text-sm sm:text-base text-slate-400 max-w-xl leading-relaxed mt-0.5">
+              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-xl leading-relaxed mt-0.5">
                 You haven&apos;t added any habits yet. Start with a small step — big changes come from consistent, deliberate actions.
               </p>
             </div>
@@ -272,25 +272,25 @@ export default function EmptyHabitsState({
               <button
                 type="button"
                 onClick={handleScrollToStarters}
-                className="h-11 px-5 bg-[#14191e] hover:bg-[#1a2128] border border-white/[0.08] hover:border-white/[0.15] text-white font-semibold rounded-xl text-sm flex items-center gap-2 active:scale-95 transition-all cursor-pointer"
+                className="h-11 px-5 bg-slate-100 hover:bg-slate-200/80 dark:bg-[#14191e] dark:hover:bg-[#1a2128] border border-slate-200/90 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/[0.15] text-slate-800 dark:text-white font-semibold rounded-xl text-sm flex items-center gap-2 active:scale-95 transition-all cursor-pointer"
               >
-                <Sparkles className="w-4 h-4 text-teal-400" />
+                <Sparkles className="w-4 h-4 text-teal-600 dark:text-teal-400" />
                 <span>Use Guided Template</span>
               </button>
             </div>
 
             {/* Micro Feature Highlights */}
-            <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-white/[0.06] text-xs text-slate-300 font-medium">
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#11161b] border border-white/[0.06]">
-                <Check className="w-3.5 h-3.5 text-[#00E599] stroke-[2.5]" />
+            <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-slate-200/80 dark:border-white/[0.06] text-xs text-slate-600 dark:text-slate-300 font-medium">
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100/80 dark:bg-[#11161b] border border-slate-200/80 dark:border-white/[0.06] transition-colors">
+                <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-[#00E599] stroke-[2.5]" />
                 <span>Atomic micro-cadences</span>
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#11161b] border border-white/[0.06]">
-                <RotateCcw className="w-3.5 h-3.5 text-teal-400 stroke-[2]" />
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100/80 dark:bg-[#11161b] border border-slate-200/80 dark:border-white/[0.06] transition-colors">
+                <RotateCcw className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 stroke-[2]" />
                 <span>No streak anxiety</span>
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#11161b] border border-white/[0.06]">
-                <Zap className="w-3.5 h-3.5 text-amber-400 stroke-[2]" />
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100/80 dark:bg-[#11161b] border border-slate-200/80 dark:border-white/[0.06] transition-colors">
+                <Zap className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 stroke-[2]" />
                 <span>Instant telemetry</span>
               </div>
             </div>
@@ -313,7 +313,7 @@ export default function EmptyHabitsState({
             return (
               <div
                 key={starter.id}
-                className="group p-4 sm:p-4.5 bg-[#0e1216] border border-white/[0.06] hover:border-emerald-500/30 rounded-2xl shadow-xs transition-all flex flex-col justify-between gap-4 text-left hover:bg-[#12161b]"
+                className="group p-4 sm:p-4.5 bg-white dark:bg-[#0e1216] border border-slate-200/90 dark:border-white/[0.06] hover:border-emerald-500/40 rounded-2xl shadow-xs transition-all flex flex-col justify-between gap-4 text-left hover:bg-slate-50/80 dark:hover:bg-[#12161b]"
               >
                 {/* Card Top: Icon, Name + Verified Badge, Category Tag */}
                 <div className="flex items-start justify-between gap-2">
@@ -325,12 +325,12 @@ export default function EmptyHabitsState({
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-sm sm:text-base font-bold text-white truncate">
+                        <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
                           {starter.name}
                         </span>
-                        <ShieldCheck className="w-4 h-4 text-[#00E599] shrink-0" />
+                        <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-[#00E599] shrink-0" />
                       </div>
-                      <span className="text-xs text-[#85948b] block truncate mt-0.5">
+                      <span className="text-xs text-slate-500 dark:text-[#85948b] block truncate mt-0.5">
                         {starter.subtitle}
                       </span>
                     </div>
@@ -344,14 +344,14 @@ export default function EmptyHabitsState({
                 </div>
 
                 {/* Card Bottom: Schedule/Timing and Add Button */}
-                <div className="flex items-center justify-between pt-2 border-t border-white/[0.06]">
-                  <div className="flex items-center gap-1.5 text-xs text-[#85948b] font-medium">
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-white/[0.06]">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-[#85948b] font-medium">
                     {starter.scheduleType === 'sun' ? (
-                      <Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <Sun className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
                     ) : starter.scheduleType === 'moon' ? (
-                      <Moon className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                      <Moon className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400 shrink-0" />
                     ) : (
-                      <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <Clock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-400 shrink-0" />
                     )}
                     <span>{starter.schedule}</span>
                   </div>
@@ -363,7 +363,7 @@ export default function EmptyHabitsState({
                     className={`h-8 px-3.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border active:scale-95 ${
                       isAdding
                         ? 'bg-[#00E599] text-slate-950 border-[#00E599]'
-                        : 'bg-[#181e23] hover:bg-[#00E599] hover:text-slate-950 text-slate-200 border-white/[0.08]'
+                        : 'bg-slate-100 hover:bg-[#00E599] hover:text-slate-950 text-slate-700 border-slate-200 dark:bg-[#181e23] dark:hover:bg-[#00E599] dark:hover:text-slate-950 dark:text-slate-200 dark:border-white/[0.08]'
                     }`}
                   >
                     {isAdding ? (
@@ -387,16 +387,16 @@ export default function EmptyHabitsState({
         {/* Bottom Quick Custom Habit Input Bar */}
         <form
           onSubmit={handleCustomSubmit}
-          className="flex flex-col sm:flex-row items-center gap-3 p-2 sm:p-2.5 bg-[#0e1216] border border-white/[0.08] rounded-2xl shadow-sm mt-1 focus-within:border-emerald-500/40 transition-colors"
+          className="flex flex-col sm:flex-row items-center gap-3 p-2 sm:p-2.5 bg-white dark:bg-[#0e1216] border border-slate-200/90 dark:border-white/[0.08] rounded-2xl shadow-sm mt-1 focus-within:border-emerald-500/40 transition-colors"
         >
           <div className="relative flex-1 flex items-center w-full">
-            <Tag className="w-4 h-4 text-[#606e7b] absolute left-3.5 pointer-events-none" />
+            <Tag className="w-4 h-4 text-slate-400 dark:text-[#606e7b] absolute left-3.5 pointer-events-none" />
             <input
               type="text"
               value={customName}
               onChange={(e) => setCustomName(e.target.value)}
               placeholder="Or enter your custom habit name (e.g., Code for 45 mins, Floss, Read pa...)"
-              className="w-full h-10 pl-10 pr-4 bg-transparent rounded-xl text-xs sm:text-sm text-white placeholder-[#606e7b] focus:outline-none transition-all"
+              className="w-full h-10 pl-10 pr-4 bg-transparent rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-[#606e7b] focus:outline-none transition-all"
             />
           </div>
 

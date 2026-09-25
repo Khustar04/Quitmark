@@ -38,10 +38,14 @@ export default function RootLayout() {
     (route) => location.pathname === route || location.pathname.startsWith(`${route}/`)
   );
 
-  // Show navbar: on desktop/web always; on mobile only when authenticated
-  const showNavbar = isAuth || !isMobile;
-  // Show marketing footer: only on web marketing routes, never on mobile app
-  const showFooter = !isAppRoute && !isMobile;
+  const isAuthRoute = ['/login', '/signup', '/forgot-password', '/reset-password', '/confirm-email'].some(
+    (route) => location.pathname === route || location.pathname.startsWith(`${route}/`)
+  );
+
+  // Show navbar: on desktop/web always; on mobile only when authenticated; never on auth routes
+  const showNavbar = (isAuth || !isMobile) && !isAuthRoute;
+  // Show marketing footer: only on web marketing routes, never on mobile app, never on auth routes
+  const showFooter = !isAppRoute && !isMobile && !isAuthRoute;
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-slate-50 dark:bg-[#111417] text-slate-900 dark:text-[#e1e2e7] antialiased transition-colors">

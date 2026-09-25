@@ -89,8 +89,8 @@ export const signUpWithEmail = async (email, password) => {
   ensureClient();
   const redirectUrl =
     typeof window !== 'undefined'
-      ? `${window.location.origin}/dashboard`
-      : '/dashboard';
+      ? `${window.location.origin}/confirm-email`
+      : '/confirm-email';
 
   const { data, error } = await runSingleAuthRequest(
     `signup:${email.trim().toLowerCase()}`,

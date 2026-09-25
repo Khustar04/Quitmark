@@ -45,6 +45,7 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage'));
 const GoalsPage = lazy(() => import('./pages/GoalsPage'));
 const HabitsPage = lazy(() => import('./pages/HabitsPage'));
+const ConfirmEmailPage = lazy(() => import('./pages/ConfirmEmailPage'));
 
 export default function App() {
   const dispatch = useDispatch();
@@ -67,7 +68,42 @@ export default function App() {
       unsubscribeFromPush().catch(() => {});
     };
 
+    const isConfirmationUrl = () => {
+      if (typeof window === 'undefined') return false;
+      const isConfirmPath = window.location.pathname.startsWith('/confirm-email');
+      const hash = window.location.hash.replace(/^#/, '');
+      const hashParams = new URLSearchParams(hash);
+      const searchParams = new URLSearchParams(window.location.search);
+      const isSignupType =
+        hashParams.get('type') === 'signup' ||
+        searchParams.get('type') === 'signup';
+      return isConfirmPath || isSignupType;
+    };
+
+    // If an email confirmation link arrives (including any legacy /dashboard redirect links),
+    // immediately intercept, redirect to /confirm-email, and never allow automatic login.
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.replace(/^#/, '');
+      const hashParams = new URLSearchParams(hash);
+      const searchParams = new URLSearchParams(window.location.search);
+      const isSignupType =
+        hashParams.get('type') === 'signup' ||
+        searchParams.get('type') === 'signup';
+
+      if (isSignupType && !window.location.pathname.startsWith('/confirm-email')) {
+        clearUserState();
+        window.location.replace(`/confirm-email${window.location.search}${window.location.hash}`);
+        return;
+      }
+    }
+
     const applySession = (session, user) => {
+      // Security guard: Email confirmation must NOT grant direct application access.
+      if (isConfirmationUrl()) {
+        clearUserState();
+        return;
+      }
+
       if (!session || !user) {
         clearUserState();
         return;
@@ -192,21 +228,11 @@ export default function App() {
     <BrowserRouter>
       <Suspense fallback={<LoadingScreen />}>
         <Routes>
-          {/* Reset Password (completely isolated layout) */}
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-
+          {/* Public Website & Marketing / App Shell Routes */}
           <Route path="/" element={<RootLayout />}>
+            <Route index element={isMobileApp() ? <MobileStarterPage /> : <LandingPage />} />
             <Route path="faq" element={<FaqPage />} />
             <Route path="report-bug" element={<ReportBugPage />} />
-
-            {/* Public Auth Routes (redirect to /dashboard if already logged in) */}
-            <Route element={<PublicAuthRoute />}>
-              <Route index element={isMobileApp() ? <MobileStarterPage /> : <LandingPage />} />
-              <Route path="login" element={<LoginPage />} />
-              <Route path="signup" element={<SignupPage />} />
-              <Route path="forgot-password" element={<ForgotPasswordPage />} />
-            </Route>
-
 
             {/* Protected Routes (redirect to /login if unauthenticated) */}
             <Route element={<ProtectedRoute />}>
@@ -227,6 +253,15 @@ export default function App() {
 
             {/* 404 Fallback */}
             <Route path="*" element={<NotFoundPage />} />
+          </Route>
+
+          {/* Authentication & Confirmation Routes (Completely isolated from public website Navbar & Footer) */}
+          <Route element={<PublicAuthRoute />}>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/confirm-email" element={<ConfirmEmailPage />} />
           </Route>
         </Routes>
       </Suspense>

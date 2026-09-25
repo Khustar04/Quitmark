@@ -108,7 +108,7 @@ function HabitCard({
 
   return (
     <div
-      className={`habit-card relative rounded-2xl border transition-all flex flex-col p-5 sm:p-6 h-full ${
+      className={`habit-card relative rounded-2xl border transition-all flex flex-col p-5 sm:p-6 h-full min-w-0 max-w-full overflow-hidden ${
         hasActiveStreak
           ? 'bg-white dark:bg-[#0D0F17] border-emerald-500/30 dark:border-emerald-500/20 shadow-sm dark:shadow-[0_0_15px_-5px_rgba(16,185,129,0.1)] hover:border-emerald-500/50'
           : 'bg-white dark:bg-[#131722] border-zinc-200 dark:border-[#232936] hover:border-zinc-300 dark:hover:border-[#334155]'
@@ -183,33 +183,33 @@ function HabitCard({
                 </button>
               )}
             </div>
-            <div className="flex flex-col sm:flex-row gap-2.5">
+            <div className="grid grid-cols-2 gap-2 sm:gap-2.5 w-full min-w-0">
               <button
                 type="button"
                 onClick={() => handleMark('completed')}
                 disabled={isCheckingIn}
-                className="flex-1 min-h-[44px] inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition-all shadow-sm shadow-emerald-600/20 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                className="min-h-[42px] sm:min-h-[44px] inline-flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-semibold transition-all shadow-sm shadow-emerald-600/20 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 min-w-0"
               >
                 {isCheckingIn ? (
                   <Loader2 className="w-4 h-4 animate-spin shrink-0" />
                 ) : (
                   <Check className="w-4 h-4 stroke-[2.5] shrink-0" />
                 )}
-                <span>Completed</span>
+                <span className="truncate">Completed</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => handleMark('missed')}
                 disabled={isCheckingIn}
-                className="flex-1 min-h-[44px] inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-zinc-200 dark:border-[#232936] bg-zinc-50 dark:bg-zinc-900/50 text-zinc-700 dark:text-zinc-300 hover:bg-red-500/10 hover:text-red-600 dark:hover:border-red-500/30 text-sm font-medium transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+                className="min-h-[42px] sm:min-h-[44px] inline-flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl border border-zinc-200 dark:border-[#232936] bg-zinc-50 dark:bg-zinc-900/50 text-zinc-700 dark:text-zinc-300 hover:bg-red-500/10 hover:text-red-600 dark:hover:border-red-500/30 text-xs sm:text-sm font-medium transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50 min-w-0"
               >
                 {isCheckingIn ? (
                   <Loader2 className="w-4 h-4 animate-spin shrink-0" />
                 ) : (
                   <X className="w-4 h-4 shrink-0" />
                 )}
-                <span>Missed</span>
+                <span className="truncate">Missed</span>
               </button>
 
               {showStatusChange && todayStatus !== 'pending' && (
@@ -217,10 +217,10 @@ function HabitCard({
                   type="button"
                   onClick={() => handleMark('pending')}
                   disabled={isCheckingIn}
-                  className="flex-1 min-h-[44px] inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-zinc-200 dark:border-[#232936] bg-zinc-50 dark:bg-zinc-900/50 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-sm font-medium transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                  className="col-span-2 min-h-[42px] sm:min-h-[44px] inline-flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl border border-zinc-200 dark:border-[#232936] bg-zinc-50 dark:bg-zinc-900/50 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-xs sm:text-sm font-medium transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 min-w-0"
                 >
                   {isCheckingIn ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <RotateCcw className="w-4 h-4 shrink-0" />}
-                  <span>Pending</span>
+                  <span className="truncate">Pending</span>
                 </button>
               )}
             </div>

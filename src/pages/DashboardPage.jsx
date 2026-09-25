@@ -871,11 +871,11 @@ export default function DashboardPage() {
           <>
             {/* Date Selector Row */}
             <div className="flex items-center justify-between mt-5">
-              <div className="flex items-center gap-2 text-slate-300 text-sm font-medium">
-                <CalendarIcon className="w-4 h-4 text-slate-400" />
+              <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 text-sm font-medium">
+                <CalendarIcon className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                 <span>{formattedMobileDate}</span>
               </div>
-              <span className="px-3 py-1 rounded-md bg-[#181d22] border border-white/[0.08] text-[11px] font-mono font-bold text-slate-300 tracking-wider uppercase">
+              <span className="px-3 py-1 rounded-md bg-slate-100 dark:bg-[#181d22] border border-slate-200/80 dark:border-white/[0.08] text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 tracking-wider uppercase">
                 TODAY
               </span>
             </div>
@@ -1006,12 +1006,12 @@ export default function DashboardPage() {
             {latestGoal ? (
               <Link
                 to="/goals"
-                className="block rounded-2xl bg-[#141a1e] border border-white/[0.06] p-4 mt-3 text-left shadow-sm active:scale-[0.99] transition-all group"
+                className="block rounded-2xl bg-white dark:bg-[#141a1e] border border-slate-200/80 dark:border-white/[0.06] p-4 mt-3 text-left shadow-sm active:scale-[0.99] transition-all group"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5 text-slate-400">
+                  <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
                     <Zap className="w-3.5 h-3.5 text-[#00E599]" />
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 group-hover:text-[#00E599] transition-colors">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-[#00E599] transition-colors">
                       {latestGoal.status === 'completed' ? 'Completed Goal' : 'Active Cycle Goal'}
                     </span>
                     <ChevronRight className="w-3 h-3 text-slate-400 group-hover:translate-x-0.5 group-hover:text-[#00E599] transition-all shrink-0" />
@@ -1025,17 +1025,17 @@ export default function DashboardPage() {
                         )} of ${latestGoalStats?.totalDays || Number(latestGoal.duration_days) || 30}`}
                   </span>
                 </div>
-                <p className="text-sm font-semibold text-white truncate">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                   {latestGoal.name}
                 </p>
-                <div className="w-full h-1.5 rounded-full bg-[#1f282e] overflow-hidden mt-2.5">
+                <div className="w-full h-1.5 rounded-full bg-slate-200 dark:bg-[#1f282e] overflow-hidden mt-2.5">
                   <div
                     style={{ width: `${Math.min(100, Math.max(0, latestGoalStats?.progressPercentage ?? 0))}%` }}
                     className="h-full bg-[#00E599] rounded-full transition-all duration-500"
                   />
                 </div>
-                <div className="flex items-center justify-between mt-2.5 text-[11px] text-slate-400">
-                  <span className="flex items-center gap-1 text-emerald-400">
+                <div className="flex items-center justify-between mt-2.5 text-[11px] text-slate-500 dark:text-slate-400">
+                  <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
                     <span>🔥</span> {latestGoalStats?.completedDaysCount ?? 0} days logged
                   </span>
                   <span>{latestGoalStats?.daysRemaining ?? 0} days remaining</span>
@@ -1044,51 +1044,51 @@ export default function DashboardPage() {
             ) : isUsingDemo ? (
               <Link
                 to="/goals"
-                className="block rounded-2xl bg-[#141a1e] border border-white/[0.06] p-4 mt-3 text-left shadow-sm active:scale-[0.99] transition-all group"
+                className="block rounded-2xl bg-white dark:bg-[#141a1e] border border-slate-200/80 dark:border-white/[0.06] p-4 mt-3 text-left shadow-sm active:scale-[0.99] transition-all group"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5 text-slate-400">
+                  <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
                     <Zap className="w-3.5 h-3.5 text-[#00E599]" />
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 group-hover:text-[#00E599] transition-colors">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-[#00E599] transition-colors">
                       Active Cycle Goal
                     </span>
                     <ChevronRight className="w-3 h-3 text-slate-400 group-hover:translate-x-0.5 group-hover:text-[#00E599] transition-all shrink-0" />
                   </div>
                   <span className="font-mono text-xs font-bold text-[#00E599]">Day 14 of 30</span>
                 </div>
-                <p className="text-sm font-semibold text-white">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">
                   Deep Work &amp; Wellness 30-Day Sprint
                 </p>
-                <div className="w-full h-1.5 rounded-full bg-[#1f282e] overflow-hidden mt-2.5">
+                <div className="w-full h-1.5 rounded-full bg-slate-200 dark:bg-[#1f282e] overflow-hidden mt-2.5">
                   <div
                     style={{ width: '46%' }}
                     className="h-full bg-[#00E599] rounded-full transition-all duration-500"
                   />
                 </div>
-                <div className="flex items-center justify-between mt-2.5 text-[11px] text-slate-400">
-                  <span className="flex items-center gap-1 text-emerald-400">
+                <div className="flex items-center justify-between mt-2.5 text-[11px] text-slate-500 dark:text-slate-400">
+                  <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
                     <span>🔥</span> 14-day streak active
                   </span>
                   <span>16 days remaining</span>
                 </div>
               </Link>
             ) : (
-              <div className="rounded-2xl bg-[#141a1e] border border-white/[0.06] p-4 mt-3 text-left shadow-sm">
+              <div className="rounded-2xl bg-white dark:bg-[#141a1e] border border-slate-200/80 dark:border-white/[0.06] p-4 mt-3 text-left shadow-sm transition-colors">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5 text-slate-400">
+                  <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
                     <Zap className="w-3.5 h-3.5 text-[#00E599]" />
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400">
                       Active Cycle Goal
                     </span>
                   </div>
-                  <span className="text-[11px] text-slate-500">No active goal</span>
+                  <span className="text-[11px] text-slate-400 dark:text-slate-500">No active goal</span>
                 </div>
-                <p className="text-xs text-slate-400 leading-snug mb-3">
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug mb-3">
                   Set a 30 or 60-day sprint goal to supercharge your consistency.
                 </p>
                 <Link
                   to="/goals"
-                  className="inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-medium bg-[#00E599]/10 hover:bg-[#00E599]/20 text-[#00E599] border border-[#00E599]/20 transition-all w-full"
+                  className="inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-medium bg-[#00E599]/10 hover:bg-[#00E599]/20 text-emerald-600 dark:text-[#00E599] border border-emerald-500/20 dark:border-[#00E599]/20 transition-all w-full"
                 >
                   <span>+ Set a Goal</span>
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -1097,8 +1097,8 @@ export default function DashboardPage() {
             )}
 
             {/* Motivational Quote Card */}
-            <div className="rounded-2xl bg-[#141a1e] border border-white/[0.06] p-4 text-center mt-3 mb-2">
-              <p className="text-xs text-slate-400 italic leading-relaxed">
+            <div className="rounded-2xl bg-white dark:bg-[#141a1e] border border-slate-200/80 dark:border-white/[0.06] p-4 text-center mt-3 mb-2 transition-colors">
+              <p className="text-xs text-slate-500 dark:text-slate-400 italic leading-relaxed">
                 &ldquo;{dailyAffirmation}&rdquo;
               </p>
             </div>
