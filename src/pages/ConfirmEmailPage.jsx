@@ -14,6 +14,13 @@ export default function ConfirmEmailPage() {
   const [isProcessing, setIsProcessing] = useState(true);
 
   useEffect(() => {
+    dispatch(clearAuth());
+    if (supabase) {
+      supabase.auth.signOut().catch(() => {});
+    }
+  }, [dispatch]);
+
+  useEffect(() => {
     const prefersReducedMotion =
       typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;

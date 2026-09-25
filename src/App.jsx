@@ -70,13 +70,20 @@ export default function App() {
 
     const isConfirmationUrl = () => {
       if (typeof window === 'undefined') return false;
-      const isConfirmPath = window.location.pathname.startsWith('/confirm-email');
+      const path = window.location.pathname;
+      const isConfirmPath =
+        path === '/confirm-email' ||
+        path.startsWith('/confirm-email/') ||
+        path === '/confirm' ||
+        path === '/verify-email';
       const hash = window.location.hash.replace(/^#/, '');
       const hashParams = new URLSearchParams(hash);
       const searchParams = new URLSearchParams(window.location.search);
+      const type = hashParams.get('type') || searchParams.get('type');
       const isSignupType =
-        hashParams.get('type') === 'signup' ||
-        searchParams.get('type') === 'signup';
+        type === 'signup' ||
+        type === 'email_confirmation' ||
+        type === 'invite';
       return isConfirmPath || isSignupType;
     };
 
@@ -86,9 +93,11 @@ export default function App() {
       const hash = window.location.hash.replace(/^#/, '');
       const hashParams = new URLSearchParams(hash);
       const searchParams = new URLSearchParams(window.location.search);
+      const type = hashParams.get('type') || searchParams.get('type');
       const isSignupType =
-        hashParams.get('type') === 'signup' ||
-        searchParams.get('type') === 'signup';
+        type === 'signup' ||
+        type === 'email_confirmation' ||
+        type === 'invite';
 
       if (isSignupType && !window.location.pathname.startsWith('/confirm-email')) {
         clearUserState();
@@ -228,7 +237,20 @@ export default function App() {
     <BrowserRouter>
       <Suspense fallback={<LoadingScreen />}>
         <Routes>
-          {/* Public Website & Marketing / App Shell Routes */}
+          {/* 1. Standalone Email Confirmation Routes (No Sidebar, No Navbar, No Footer) */}
+          <Route path="/confirm-email" element={<ConfirmEmailPage />} />
+          <Route path="/confirm" element={<ConfirmEmailPage />} />
+          <Route path="/verify-email" element={<ConfirmEmailPage />} />
+
+          {/* 2. Standalone Authentication Routes (No Sidebar, No Navbar, No Footer) */}
+          <Route element={<PublicAuthRoute />}>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+          </Route>
+
+          {/* 3. Public Website & Marketing / App Shell Routes */}
           <Route path="/" element={<RootLayout />}>
             <Route index element={isMobileApp() ? <MobileStarterPage /> : <LandingPage />} />
             <Route path="faq" element={<FaqPage />} />
@@ -250,21 +272,10 @@ export default function App() {
               <Route path="settings" element={<SettingsPage />} />
               <Route path="habits/:habitId" element={<HabitHistoryPage />} />
             </Route>
-
-            {/* 404 Fallback */}
-            <Route path="*" element={<NotFoundPage />} />
           </Route>
 
-          {/* Public Email Confirmation Route (isolated, non-protected, never redirects to dashboard) */}
-          <Route path="/confirm-email" element={<ConfirmEmailPage />} />
-
-          {/* Authentication Routes (Redirect to /dashboard if already logged in) */}
-          <Route element={<PublicAuthRoute />}>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
-          </Route>
+          {/* 4. Global 404 Fallback (Outside RootLayout to prevent leaking authenticated sidebar) */}
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
     </BrowserRouter>
