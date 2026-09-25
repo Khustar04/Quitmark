@@ -3,9 +3,9 @@ import { Flame, ShieldCheck } from 'lucide-react';
 export default function ProductPreview() {
 
   return (
-    <section className="product-preview-section max-w-2xl mx-auto px-4 pb-16 sm:pb-24">
+    <section className="product-preview-section max-w-2xl mx-auto px-4 pb-8 sm:pb-12">
       {/* Container Frame */}
-      <div className="product-preview-card relative rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 shadow-lg shadow-zinc-900/5 dark:shadow-2xl dark:shadow-black/40 px-6 py-7 sm:px-8 sm:py-8 transition-colors">
+      <div className="product-preview-card relative rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg shadow-zinc-900/5 dark:shadow-2xl dark:shadow-black/40 px-6 py-7 sm:px-8 sm:py-8 transition-colors">
         {/* Subtle top indicator bar */}
         <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/80 pb-4 mb-5">
           <div className="flex items-center gap-2.5">
@@ -18,8 +18,8 @@ export default function ProductPreview() {
             </span>
           </div>
 
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-600/20 text-emerald-800 dark:text-emerald-300 text-xs font-semibold">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
             <span>Day 12 • Streak Active</span>
           </div>
         </div>
@@ -27,7 +27,7 @@ export default function ProductPreview() {
         {/* Central Metric */}
         <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2">
           <div>
-            <span className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">
+            <span className="text-sm text-zinc-600 dark:text-zinc-400 font-medium">
               Current Progress
             </span>
             <div className="flex items-center gap-2 mt-1">
@@ -38,8 +38,8 @@ export default function ProductPreview() {
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-500/5 dark:bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/15 self-start sm:self-auto">
-            <ShieldCheck className="w-4 h-4" />
+          <div className="flex items-center gap-1.5 text-xs text-emerald-800 dark:text-emerald-300 font-semibold bg-emerald-50 dark:bg-emerald-500/15 px-3 py-1.5 rounded-lg border border-emerald-600/20 self-start sm:self-auto">
+            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             <span>Checked in today</span>
           </div>
         </div>

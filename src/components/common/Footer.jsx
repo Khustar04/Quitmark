@@ -193,8 +193,8 @@ export default function Footer() {
           <div className="mt-12 pt-6 border-t border-zinc-200 dark:border-zinc-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-zinc-500 dark:text-zinc-400">
             <p>&copy; {new Date().getFullYear()} Quitmark</p>
             <p className="inline-flex items-center gap-1.5">
-              <span>Built By</span>
-              <span className="text-red-500" aria-label="love">Khustar Hussain ❤️</span>
+              <span>Built By Khustar Hussain</span>
+              <span role="img" aria-label="love" className="text-red-500">❤️</span>
             </p>
           </div>
         </div>

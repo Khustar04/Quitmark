@@ -85,7 +85,7 @@ export default function Navbar() {
           ? 'max(env(safe-area-inset-top, 0px), 28px)'
           : 'max(env(safe-area-inset-top, 0px), 0px)',
       }}
-      className="w-full border-b border-zinc-200/80 dark:border-zinc-800/80 bg-white/95 dark:bg-[#090A0F]/95 backdrop-blur-md transition-colors shadow-sm"
+      className="w-full border-b border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-[#090A0F] supports-[backdrop-filter]:bg-white/95 dark:supports-[backdrop-filter]:bg-[#090A0F]/95 backdrop-blur-md transition-colors shadow-sm"
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Brand Logo - Links to /dashboard when authenticated, / when unauthenticated */}
@@ -98,7 +98,7 @@ export default function Navbar() {
           <img src="/logo.png" alt="Quitmark Logo" className="w-8 h-8 rounded-xl object-contain group-hover:scale-105 transition-transform" />
           <div className="flex flex-col">
             <span className="font-bold leading-tight">Quitmark</span>
-            <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400 tracking-tight leading-none">
+            <span className="text-xs font-normal text-zinc-600 dark:text-zinc-400 tracking-tight leading-none">
               Small Habits. Big Changes.
             </span>
           </div>
@@ -200,7 +200,7 @@ export default function Navbar() {
               <a
                 href="/#how-it-works"
                 onClick={handleHowItWorksClick}
-                className="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                className="text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors"
               >
                 How it Works
               </a>
@@ -209,14 +209,14 @@ export default function Navbar() {
 
               <Link
                 to="/login"
-                className="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                className="text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors"
               >
                 Login
               </Link>
 
               <Link
                 to="/signup"
-                className="inline-flex items-center justify-center text-sm font-medium px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors shadow-sm shadow-emerald-600/20 active:scale-[0.98]"
+                className="inline-flex items-center justify-center text-sm font-semibold px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 text-white transition-colors shadow-sm shadow-emerald-700/20 active:scale-[0.98]"
               >
                 Get Started
               </Link>
@@ -287,7 +287,7 @@ export default function Navbar() {
           <Link
             to="/signup"
             onClick={() => setMobileMenuOpen(false)}
-            className="w-full text-center px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium shadow-sm min-h-[44px] flex items-center justify-center"
+            className="w-full text-center px-4 py-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 text-white text-sm font-semibold shadow-sm min-h-[44px] flex items-center justify-center"
           >
             Get Started
           </Link>

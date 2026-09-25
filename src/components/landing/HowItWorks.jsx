@@ -78,24 +78,24 @@ export default function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="how-it-works-section max-w-6xl mx-auto px-4 py-20 sm:py-28 border-t border-zinc-200/60 dark:border-zinc-800/60 scroll-mt-16"
+      className="how-it-works-section max-w-6xl mx-auto px-4 py-10 sm:py-14 border-t border-zinc-200/60 dark:border-zinc-800/60 scroll-mt-16"
     >
       {/* Section Header */}
-      <div className="text-center max-w-2xl mx-auto mb-16 sm:mb-20">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold mb-4">
+      <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-10">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold mb-3">
           <Zap className="w-3.5 h-3.5" />
           <span>Simple, Behavioral Framework</span>
         </div>
         <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-white leading-tight">
           How Quitmark Works
         </h2>
-        <p className="mt-4 text-base sm:text-lg text-zinc-700 dark:text-zinc-400 leading-relaxed">
+        <p className="mt-3 text-base sm:text-lg text-zinc-700 dark:text-zinc-400 leading-relaxed">
           No complicated setups, no overwhelming charts. Just a clean four-step system designed to rewire your habits one day at a time.
         </p>
       </div>
 
       {/* Steps Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 mb-16">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6 mb-8 sm:mb-10">
         {steps.map((step) => {
           const Icon = step.icon;
           return (
@@ -228,7 +228,7 @@ export default function HowItWorks() {
       </div>
 
       {/* Trust & Architecture Badges */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-12">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
         <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 shadow-sm dark:shadow-none flex items-center gap-3.5">
           <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
             <Smartphone className="w-4 h-4" />
@@ -261,18 +261,18 @@ export default function HowItWorks() {
       </div>
 
       {/* Bottom CTA Card */}
-      <div className="max-w-4xl mx-auto rounded-2xl border border-emerald-500/20 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 sm:gap-8 text-center sm:text-left">
+      <div className="max-w-4xl mx-auto rounded-2xl border border-emerald-500/20 bg-emerald-50/70 dark:bg-zinc-900 p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 sm:gap-8 text-center sm:text-left">
         <div>
           <h3 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white">
             Ready to break your first unwanted habit?
           </h3>
-          <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+          <p className="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 mt-1">
             Free forever, no credit card required. Start your streak right now.
           </p>
         </div>
         <Link
           to="/signup"
-          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm shadow-md shadow-emerald-600/25 transition-all active:scale-[0.98] flex-shrink-0"
+          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 text-white font-semibold text-sm shadow-md shadow-emerald-700/25 transition-all active:scale-[0.98] flex-shrink-0"
         >
           <span>Start Your Streak</span>
           <ArrowRight className="w-4 h-4" />
