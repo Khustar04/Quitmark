@@ -98,7 +98,7 @@ export default function Navbar() {
           <img src="/logo.png" alt="Quitmark Logo" className="w-8 h-8 rounded-xl object-contain group-hover:scale-105 transition-transform" />
           <div className="flex flex-col">
             <span className="font-bold leading-tight">Quitmark</span>
-            <span className="text-[10px] font-normal text-zinc-500 dark:text-zinc-400 tracking-tight leading-none">
+            <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400 tracking-tight leading-none">
               Small Habits. Big Changes.
             </span>
           </div>

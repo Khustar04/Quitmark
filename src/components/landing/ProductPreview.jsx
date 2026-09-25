@@ -5,7 +5,7 @@ export default function ProductPreview() {
   return (
     <section className="product-preview-section max-w-2xl mx-auto px-4 pb-16 sm:pb-24">
       {/* Container Frame */}
-      <div className="product-preview-card relative rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 shadow-lg shadow-zinc-900/5 dark:shadow-2xl dark:shadow-black/40 p-5 sm:p-7 transition-colors">
+      <div className="product-preview-card relative rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 shadow-lg shadow-zinc-900/5 dark:shadow-2xl dark:shadow-black/40 px-6 py-7 sm:px-8 sm:py-8 transition-colors">
         {/* Subtle top indicator bar */}
         <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/80 pb-4 mb-5">
           <div className="flex items-center gap-2.5">
@@ -13,7 +13,7 @@ export default function ProductPreview() {
             <h2 className="font-semibold text-zinc-900 dark:text-white text-base sm:text-lg">
               Daily Habit
             </h2>
-            <span className="text-xs font-medium px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+            <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
               Quit Goal
             </span>
           </div>

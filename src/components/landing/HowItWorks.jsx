@@ -191,7 +191,7 @@ export default function HowItWorks() {
                       {step.preview.blocks.map((active, i) => (
                         <div
                           key={i}
-                          className={`flex-1 h-3 rounded-sm ${
+                          className={`flex-1 h-3 rounded-md ${
                             active
                               ? 'bg-emerald-500 shadow-sm shadow-emerald-500/30'
                               : 'bg-zinc-200 dark:bg-zinc-800'
@@ -206,7 +206,7 @@ export default function HowItWorks() {
                 {step.preview.type === 'leaderboard' && (
                   <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/70 dark:border-zinc-800/80 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center text-xs font-bold">
+                      <div className="w-7 h-7 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center text-xs font-bold">
                         #3
                       </div>
                       <div>
@@ -228,32 +228,32 @@ export default function HowItWorks() {
       </div>
 
       {/* Trust & Architecture Badges */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12">
-        <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 shadow-sm dark:shadow-none flex items-center gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-12">
+        <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 shadow-sm dark:shadow-none flex items-center gap-3.5">
           <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
             <Smartphone className="w-4 h-4" />
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <h4 className="text-xs font-semibold text-zinc-900 dark:text-white">Installable PWA</h4>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">Add to home screen on iOS & Android in 1 tap</p>
           </div>
         </div>
 
-        <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 shadow-sm dark:shadow-none flex items-center gap-3">
+        <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 shadow-sm dark:shadow-none flex items-center gap-3.5">
           <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
             <Lock className="w-4 h-4" />
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <h4 className="text-xs font-semibold text-zinc-900 dark:text-white">100% Private Data</h4>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">Row-level security ensures only you see your habits</p>
           </div>
         </div>
 
-        <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 shadow-sm dark:shadow-none flex items-center gap-3">
+        <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 shadow-sm dark:shadow-none flex items-center gap-3.5">
           <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
             <BellRing className="w-4 h-4" />
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <h4 className="text-xs font-semibold text-zinc-900 dark:text-white">Smart Urge Alerts</h4>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">Timely reminder notifications when urges peak</p>
           </div>
@@ -261,7 +261,7 @@ export default function HowItWorks() {
       </div>
 
       {/* Bottom CTA Card */}
-      <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10 text-center sm:text-left">
+      <div className="max-w-4xl mx-auto rounded-2xl border border-emerald-500/20 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 sm:gap-8 text-center sm:text-left">
         <div>
           <h3 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white">
             Ready to break your first unwanted habit?

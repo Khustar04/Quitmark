@@ -34,7 +34,7 @@ export default function Hero() {
       <div className="hero-ctas flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
         <Link
           to="/signup"
-          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm sm:text-base shadow-sm shadow-emerald-600/25 transition-all hover:gap-3 active:scale-[0.99]"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm sm:text-base shadow-sm shadow-emerald-600/25 transition-all hover:gap-3 active:scale-[0.99]"
         >
           <span>Start Your Streak</span>
           <ArrowRight className="w-4 h-4" />
@@ -43,7 +43,7 @@ export default function Hero() {
         <a
           href="#how-it-works"
           onClick={handleScrollToHowItWorks}
-          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-zinc-800 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-900/80 hover:border-zinc-400 dark:hover:border-zinc-700 font-medium text-sm sm:text-base shadow-sm dark:shadow-none transition-colors"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800/70 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-100 hover:border-zinc-400 dark:hover:border-zinc-600 font-medium text-sm sm:text-base shadow-sm dark:shadow-none transition-colors"
         >
           <span>How It Works</span>
         </a>

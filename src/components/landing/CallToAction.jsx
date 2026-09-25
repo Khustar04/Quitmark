@@ -19,7 +19,7 @@ export default function CallToAction() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
             to="/signup"
-            className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-7 py-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-base shadow-sm shadow-emerald-600/25 transition-all hover:gap-3 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+            className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-7 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-base shadow-sm shadow-emerald-600/25 transition-all hover:gap-3 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
           >
             <span>Start Your Streak</span>
             <ArrowRight className="w-4 h-4" />
@@ -27,7 +27,7 @@ export default function CallToAction() {
 
           <a
             href={ANDROID_DOWNLOAD_URL}
-            className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-7 py-3.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800/70 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-100 font-medium text-base transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+            className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-7 py-3.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800/70 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-100 font-medium text-base transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
           >
             <Download className="w-4 h-4" />
             <span>Download for Android</span>
