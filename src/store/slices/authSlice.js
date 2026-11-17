@@ -34,7 +34,7 @@ const getInitialAuthState = () => {
                       : (globalThis.Buffer?.from(base64, 'base64').toString('utf-8') || '{}')
                   );
                   const currentSec = Math.floor(Date.now() / 1000);
-                  if (payload?.iat && payload.iat > currentSec + 2) {
+                  if (payload?.iat && payload.iat > currentSec) {
                     console.warn(
                       `[Quitmark] Cached session token iat (${payload.iat}) is in the future relative to system clock (${currentSec}). Evicting stale future token.`
                     );

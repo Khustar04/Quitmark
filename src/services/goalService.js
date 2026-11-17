@@ -37,20 +37,26 @@ const runWithSessionRefresh = async (request) => {
       isClockSkewError,
       isAuthenticationError,
       refreshSessionOrThrow,
-      notifyClockSkewDetected,
+      forceSignOut,
     } = await getAuthHelpers();
 
     if (isClockSkewError(response.error)) {
-      notifyClockSkewDetected();
       if (skewRetries > 0) {
         skewRetries--;
         await new Promise((resolve) => setTimeout(resolve, 800));
         if (skewRetries === 0) {
-          const supabase = await getSupabaseClient();
-          await supabase?.auth?.refreshSession().catch(() => {});
+          try {
+            await refreshSessionOrThrow();
+          } catch {
+            return { data: [], error: null };
+          }
         }
         continue;
       }
+      if (forceSignOut) {
+        await forceSignOut();
+      }
+      return { data: [], error: null };
     }
 
     if (isAuthenticationError(response.error) && authRetries > 0) {

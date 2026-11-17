@@ -2,7 +2,6 @@ import supabase from '../lib/supabase';
 import {
   isAuthenticationError,
   isClockSkewError,
-  notifyClockSkewDetected,
   refreshSessionOrThrow,
 } from './authService';
 
@@ -61,21 +60,28 @@ const getAuthenticatedUser = async () => {
 /**
  * Executes a Supabase query with automatic retry for transient clock skew errors
  * ("JWT issued at future", PGRST303) and expired sessions.
- * (Mirrors habitService pattern)
+ * When clock-skew retries are exhausted, forces a clean sign-out so the user
+ * can log in fresh and get a valid server-generated JWT.
  */
 const withClockSkewRetry = async (queryFn, retries = 2, authRetries = 1) => {
   try {
     const { data, error } = await queryFn();
     if (error) {
       if (isClockSkewError(error)) {
-        notifyClockSkewDetected();
         if (retries > 0) {
           await new Promise((resolve) => setTimeout(resolve, 800));
           if (retries === 1) {
-            await supabase?.auth?.refreshSession().catch(() => {});
+            try {
+              await refreshSessionOrThrow();
+            } catch {
+              return null;
+            }
           }
           return withClockSkewRetry(queryFn, retries - 1, authRetries);
         }
+        const { forceSignOut } = await import('./authService');
+        await forceSignOut();
+        return null;
       }
       if (isAuthenticationError(error) && authRetries > 0) {
         await refreshSessionOrThrow();
@@ -86,14 +92,20 @@ const withClockSkewRetry = async (queryFn, retries = 2, authRetries = 1) => {
     return data;
   } catch (err) {
     if (isClockSkewError(err)) {
-      notifyClockSkewDetected();
       if (retries > 0) {
         await new Promise((resolve) => setTimeout(resolve, 800));
         if (retries === 1) {
-          await supabase?.auth?.refreshSession().catch(() => {});
+          try {
+            await refreshSessionOrThrow();
+          } catch {
+            return null;
+          }
         }
         return withClockSkewRetry(queryFn, retries - 1, authRetries);
       }
+      const { forceSignOut } = await import('./authService');
+      await forceSignOut();
+      return null;
     }
     if (isAuthenticationError(err) && authRetries > 0) {
       await refreshSessionOrThrow();

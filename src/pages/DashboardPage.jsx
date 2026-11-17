@@ -453,11 +453,17 @@ export default function DashboardPage() {
     dispatch(clearError());
     dispatch(setLoading(true));
     try {
-      await supabase?.auth?.refreshSession().catch(() => {});
+      const res = supabase ? await supabase.auth.refreshSession().catch(() => null) : null;
+      if (!res?.data?.session || res?.error) {
+        const { forceSignOut } = await import('../services/authService');
+        await forceSignOut();
+        return;
+      }
       clearCachedUser();
       await loadDashboardData();
     } catch {
-      window.location.reload();
+      const { forceSignOut } = await import('../services/authService');
+      await forceSignOut();
     } finally {
       dispatch(setLoading(false));
     }

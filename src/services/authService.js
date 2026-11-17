@@ -338,7 +338,7 @@ export const getSession = async () => {
               : (globalThis.Buffer?.from(base64, 'base64').toString('utf-8') || '{}')
           );
           const currentSec = Math.floor(Date.now() / 1000);
-          if (payload?.iat && payload.iat > currentSec + 2) {
+          if (payload?.iat && payload.iat > currentSec) {
             console.warn('[Quitmark] Loaded session token iat is in the future. Forcing immediate refresh.');
             const { data: refreshed, error: refErr } = await supabase.auth.refreshSession().catch(() => ({ data: {}, error: null }));
             if (!refErr && refreshed?.session) {
@@ -407,10 +407,16 @@ export const syncUserTimezone = async () => {
         }
 
         if (isClockSkewError(result.error)) {
-          notifyClockSkewDetected();
           if (retries > 0) {
             retries--;
             await new Promise((resolve) => setTimeout(resolve, 800));
+            if (retries === 0) {
+              try {
+                await refreshSessionOrThrow();
+              } catch {
+                break;
+              }
+            }
             continue;
           }
         }

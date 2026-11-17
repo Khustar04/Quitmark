@@ -2,8 +2,8 @@ import { supabase } from '../lib/supabase';
 import {
   isAuthenticationError,
   isClockSkewError,
-  notifyClockSkewDetected,
   refreshSessionOrThrow,
+  forceSignOut,
 } from './authService';
 
 let cachedLeaderboard = null;
@@ -65,15 +65,20 @@ export async function getLeaderboard(limitCount = 50, { force = false } = {}) {
 
         if (error) {
           if (isClockSkewError(error)) {
-            notifyClockSkewDetected();
             if (retries > 0) {
               await new Promise((res) => setTimeout(res, 800));
               if (retries === 1) {
-                await supabase?.auth?.refreshSession().catch(() => {});
+                try {
+                  await refreshSessionOrThrow();
+                } catch {
+                  return [];
+                }
               }
               retries--;
               continue;
             }
+            await forceSignOut();
+            return [];
           }
           if (isAuthenticationError(error) && authRetries > 0) {
             await refreshSessionOrThrow();
@@ -81,11 +86,6 @@ export async function getLeaderboard(limitCount = 50, { force = false } = {}) {
             continue;
           }
           console.error('Error fetching leaderboard:', error);
-          if (isClockSkewError(error)) {
-            throw new Error(
-              'Your device clock is ahead of server time. Please check your system Date & Time settings and synchronize your clock to automatic.'
-            );
-          }
           throw new Error(error.message || 'Failed to fetch leaderboard');
         }
 
