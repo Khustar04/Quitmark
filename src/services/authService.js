@@ -128,13 +128,40 @@ export const isAuthenticationError = (error) => {
 };
 
 /**
+ * Evicts stale or rejected auth tokens from localStorage, signs out Supabase client,
+ * and notifies the application to cleanly navigate to /login.
+ */
+export const forceSignOut = async () => {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch {
+      // Ignore
+    }
+  }
+  if (supabase) {
+    await supabase.auth.signOut().catch(() => {});
+  }
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    window.dispatchEvent(new CustomEvent('quitmark:session-expired'));
+  }
+};
+
+/**
  * Refreshes the session after a Supabase request rejects its access token.
  * Callers retry exactly once, preventing request loops for revoked sessions.
+ * If the refresh fails, forces sign out to avoid leaving the app in an invalid state.
  */
 export const refreshSessionOrThrow = async () => {
   ensureClient();
   const { data, error } = await supabase.auth.refreshSession();
   if (error || !data?.session?.user) {
+    await forceSignOut();
     throw new Error('Your session has expired. Please log in again.');
   }
   return data.session;

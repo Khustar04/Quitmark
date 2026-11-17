@@ -385,6 +385,11 @@ export default function DashboardPage() {
 
   const containerRef = useRef(null);
   const requestIdRef = useRef(0);
+  const initializedRef = useRef(initialized);
+
+  useEffect(() => {
+    initializedRef.current = initialized;
+  }, [initialized]);
 
   // Parallelized dashboard data loading
   const loadDashboardData = useCallback(async () => {
@@ -392,7 +397,7 @@ export default function DashboardPage() {
     const currentReq = ++requestIdRef.current;
 
     try {
-      if (!initialized) {
+      if (!initializedRef.current) {
         dispatch(setLoading(true));
       }
       dispatch(clearError());
@@ -442,7 +447,7 @@ export default function DashboardPage() {
         dispatch(setLoading(false));
       }
     }
-  }, [dispatch, userId, initialized]);
+  }, [dispatch, userId]);
 
   const handleResyncSession = useCallback(async () => {
     dispatch(clearError());

@@ -1,7 +1,7 @@
 import { useEffect, useRef, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { getSession, onAuthStateChange } from './services/authService';
+import { getSession, onAuthStateChange, forceSignOut } from './services/authService';
 import { setAuth, clearAuth } from './store/slices/authSlice';
 import { resetHabitsState } from './store/slices/habitsSlice';
 import { syncUserTimezone } from './services/authService';
@@ -131,9 +131,38 @@ export default function App() {
     };
 
     // 1. Initial session verification
-    getSession().then(({ session, user }) => {
+    getSession().then(async ({ session, user }) => {
+      if (!session || !user) {
+        clearUserState();
+        return;
+      }
+      // Proactively verify the token against the Supabase server
+      try {
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError || !userData?.user) {
+          console.warn('[Quitmark] Initial session rejected by server:', userError);
+          const { data: refreshed, error: refError } = await supabase.auth.refreshSession().catch(() => ({ data: {}, error: null }));
+          if (refError || !refreshed?.session?.user) {
+            await forceSignOut();
+            clearUserState();
+            dispatch(clearAuth());
+            return;
+          }
+          applySession(refreshed.session, refreshed.session.user);
+          return;
+        }
+      } catch (err) {
+        console.warn('[Quitmark] Server session check error:', err);
+      }
       applySession(session, user);
     });
+
+    // 2. Handle session expiration event across the entire app
+    const handleSessionExpired = () => {
+      clearUserState();
+      dispatch(clearAuth());
+    };
+    window.addEventListener('quitmark:session-expired', handleSessionExpired);
 
     // 2. Subscribe to auth events (LOGIN, LOGOUT, TOKEN_REFRESH, OAUTH_REDIRECT)
     const { data: { subscription } } = onAuthStateChange((event, session) => {
@@ -224,6 +253,7 @@ export default function App() {
 
     return () => {
       subscription?.unsubscribe();
+      window.removeEventListener('quitmark:session-expired', handleSessionExpired);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (appUrlListener) {
         appUrlListener.then((handle) => handle.remove()).catch(() => {});
