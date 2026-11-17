@@ -1,53 +1,25 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-
-/**
- * authService tests
- *
- * Only tests the pure getFriendlyAuthErrorMessage function.
- * The rest of authService requires Supabase (import.meta.env),
- * which is Vite-only and cannot run in Node.js directly.
- *
- * We extract the function by dynamically evaluating just the function code.
- */
-
-// ──────────────────────────────────────
-// Inline the pure function for testing
-// (avoids importing authService.js which depends on supabase.js -> import.meta.env)
-// ──────────────────────────────────────
-
-const getFriendlyAuthErrorMessage = (error) => {
-  if (!error) return 'An unexpected error occurred. Please try again.';
-
-  const message = (error.message || error.toString() || '').toLowerCase();
-
-  if (message.includes('invalid login credentials') || message.includes('invalid credentials')) {
-    return 'Invalid email or password.';
-  }
-  if (message.includes('user already registered') || message.includes('already exists')) {
-    return 'This email is already registered. Try logging in.';
-  }
-  if (message.includes('password should be at least 6 characters') || message.includes('weak password')) {
-    return 'Password must be at least 6 characters long.';
-  }
-  if (message.includes('invalid format') || message.includes('valid email')) {
-    return 'Please enter a valid email address.';
-  }
-  if (message.includes('email not confirmed')) {
-    return 'Please check your inbox to confirm your email before logging in.';
-  }
-  if (message.includes('provider is not enabled') || message.includes('unsupported provider')) {
-    return 'Google authentication is not enabled in your Supabase project. Please configure Google provider credentials in Supabase Dashboard (Authentication > Providers).';
-  }
-  if (message.includes('failed to fetch') || message.includes('network')) {
-    return 'Network connection error. Please check your internet connection.';
-  }
-  return 'Something went wrong. Please try again.';
-};
+import {
+  getFriendlyAuthErrorMessage,
+  isClockSkewError,
+  isAuthenticationError,
+} from '../src/services/authService.js';
 
 // ──────────────────────────────────────
 // Error message translation
 // ──────────────────────────────────────
+
+test('returns friendly message for clock skew error (JWT issued at future)', () => {
+  const result = getFriendlyAuthErrorMessage({ message: 'JWT issued at future' });
+  assert.ok(result.includes('device clock is ahead of server time'));
+  assert.ok(result.includes('Date & Time settings'));
+});
+
+test('returns friendly message for clock skew error (PGRST303)', () => {
+  const result = getFriendlyAuthErrorMessage({ code: 'PGRST303', message: 'invalid token' });
+  assert.ok(result.includes('device clock is ahead of server time'));
+});
 
 test('returns friendly message for invalid credentials', () => {
   const result = getFriendlyAuthErrorMessage({ message: 'Invalid login credentials' });
@@ -107,4 +79,65 @@ test('handles error object with only toString()', () => {
 test('case insensitive matching works', () => {
   const result = getFriendlyAuthErrorMessage({ message: 'INVALID LOGIN CREDENTIALS' });
   assert.equal(result, 'Invalid email or password.');
+});
+
+// ──────────────────────────────────────
+// isClockSkewError tests
+// ──────────────────────────────────────
+
+test('isClockSkewError detects PGRST303 code', () => {
+  assert.equal(isClockSkewError({ code: 'PGRST303' }), true);
+});
+
+test('isClockSkewError detects "JWT issued at future" message', () => {
+  assert.equal(isClockSkewError({ message: 'JWT issued at future' }), true);
+});
+
+test('isClockSkewError detects "issued in the future" message', () => {
+  assert.equal(isClockSkewError({ message: 'Token was issued in the future' }), true);
+});
+
+test('isClockSkewError detects error_description with future', () => {
+  assert.equal(isClockSkewError({ error_description: 'JWT issued at future' }), true);
+});
+
+test('isClockSkewError returns false for null/undefined/unrelated error', () => {
+  assert.equal(isClockSkewError(null), false);
+  assert.equal(isClockSkewError(undefined), false);
+  assert.equal(isClockSkewError({ message: 'JWT expired' }), false);
+  assert.equal(isClockSkewError({ message: 'Invalid login credentials' }), false);
+});
+
+// ──────────────────────────────────────
+// isAuthenticationError tests
+// ──────────────────────────────────────
+
+test('isAuthenticationError returns false for clock skew error even if status is 401', () => {
+  const clockSkewError = {
+    status: 401,
+    code: 'PGRST303',
+    message: 'JWT issued at future',
+  };
+  assert.equal(isClockSkewError(clockSkewError), true);
+  assert.equal(isAuthenticationError(clockSkewError), false);
+});
+
+test('isAuthenticationError returns true for expired JWT', () => {
+  const expiredError = {
+    status: 401,
+    message: 'JWT expired',
+  };
+  assert.equal(isClockSkewError(expiredError), false);
+  assert.equal(isAuthenticationError(expiredError), true);
+});
+
+test('isAuthenticationError returns true for generic 401 unauthorized', () => {
+  assert.equal(isAuthenticationError({ status: 401, message: 'Unauthorized' }), true);
+  assert.equal(isAuthenticationError({ message: 'authentication is required' }), true);
+});
+
+test('isAuthenticationError returns false for null/undefined/non-auth errors', () => {
+  assert.equal(isAuthenticationError(null), false);
+  assert.equal(isAuthenticationError(undefined), false);
+  assert.equal(isAuthenticationError({ status: 500, message: 'Internal Server Error' }), false);
 });

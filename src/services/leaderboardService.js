@@ -1,5 +1,10 @@
 import { supabase } from '../lib/supabase';
-import { isAuthenticationError, refreshSessionOrThrow } from './authService';
+import {
+  isAuthenticationError,
+  isClockSkewError,
+  notifyClockSkewDetected,
+  refreshSessionOrThrow,
+} from './authService';
 
 let cachedLeaderboard = null;
 let cachedLeaderboardLimit = 0;
@@ -59,20 +64,25 @@ export async function getLeaderboard(limitCount = 50, { force = false } = {}) {
         });
 
         if (error) {
-          const msg = (error.message || '').toLowerCase();
+          if (isClockSkewError(error)) {
+            notifyClockSkewDetected();
+            if (retries > 0) {
+              await new Promise((res) => setTimeout(res, 800));
+              retries--;
+              continue;
+            }
+          }
           if (isAuthenticationError(error) && authRetries > 0) {
             await refreshSessionOrThrow();
             authRetries--;
             continue;
           }
-          const isSkew = !isAuthenticationError(error) && (error.code === 'PGRST303' || msg.includes('jwt') || msg.includes('future'));
-          if (isSkew && retries > 0) {
-            await new Promise((res) => setTimeout(res, 600));
-            await supabase.auth.refreshSession().catch(() => {});
-            retries--;
-            continue;
-          }
           console.error('Error fetching leaderboard:', error);
+          if (isClockSkewError(error)) {
+            throw new Error(
+              'Your device clock is ahead of server time. Please check your system Date & Time settings and synchronize your clock to automatic.'
+            );
+          }
           throw new Error(error.message || 'Failed to fetch leaderboard');
         }
 

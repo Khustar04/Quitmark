@@ -1,5 +1,11 @@
 import supabase from '../lib/supabase';
-import { isAuthenticationError, refreshSessionOrThrow, syncUserTimezone } from './authService';
+import {
+  isAuthenticationError,
+  isClockSkewError,
+  notifyClockSkewDetected,
+  refreshSessionOrThrow,
+  syncUserTimezone,
+} from './authService';
 import { getLocalDateString } from '../utils/streaks/dateUtils';
 import { invalidateLeaderboardCache } from './leaderboardService';
 import { getHabitCategory } from '../utils/habitCategoryUtils';
@@ -7,8 +13,13 @@ import { getHabitCategory } from '../utils/habitCategoryUtils';
 /**
  * Translates raw database/Supabase errors into clean, user-friendly messages.
  */
-const getFriendlyDbErrorMessage = (error) => {
+export const getFriendlyDbErrorMessage = (error) => {
   if (!error) return 'An unexpected error occurred. Please try again.';
+
+  if (isClockSkewError(error)) {
+    return 'Your device clock is ahead of server time. Please check your system Date & Time settings and synchronize your clock to automatic.';
+  }
+
   const msg = (error.message || error.toString() || '').toLowerCase();
 
   if (msg.includes('row-level security') || msg.includes('permission denied')) {
@@ -25,9 +36,6 @@ const getFriendlyDbErrorMessage = (error) => {
   }
   if (msg.includes('only be recorded for today')) {
     return 'Check-ins can only be recorded on the current day.';
-  }
-  if (msg.includes('future') || msg.includes('jwt') || error?.code === 'PGRST303') {
-    return 'Your session was synchronizing. Please refresh.';
   }
   console.error('[Quitmark] Database request failed:', error);
   return 'We could not complete that request. Please try again.';
@@ -99,40 +107,38 @@ const getAuthenticatedUser = async () => {
 
 /**
  * Executes a Supabase query with automatic retry for transient clock skew
- * ("JWT issued at future", PGRST303) errors.
+ * ("JWT issued at future", PGRST303) errors and expired sessions.
  */
 const withClockSkewRetry = async (queryFn, retries = 2, authRetries = 1) => {
   try {
     const { data, error } = await queryFn();
     if (error) {
-      const msg = (error.message || error.toString() || '').toLowerCase();
-      const isAuth = isAuthenticationError(error);
-      const isSkew = !isAuth && (error.code === 'PGRST303' || msg.includes('future') || msg.includes('jwt'));
-      if (isAuth && authRetries > 0) {
+      if (isClockSkewError(error)) {
+        notifyClockSkewDetected();
+        if (retries > 0) {
+          // Wait 800ms for database clock to catch up with JWT iat
+          await new Promise((resolve) => setTimeout(resolve, 800));
+          return withClockSkewRetry(queryFn, retries - 1, authRetries);
+        }
+      }
+      if (isAuthenticationError(error) && authRetries > 0) {
         await refreshSessionOrThrow();
         return withClockSkewRetry(queryFn, retries, authRetries - 1);
-      }
-      if (isSkew && retries > 0) {
-        // Wait 600ms for database clock to catch up with JWT iat
-        await new Promise((resolve) => setTimeout(resolve, 600));
-        await supabase.auth.refreshSession().catch(() => {});
-        return withClockSkewRetry(queryFn, retries - 1);
       }
       throw new Error(getFriendlyDbErrorMessage(error));
     }
     return data;
   } catch (err) {
-    const msg = (err?.message || err?.toString() || '').toLowerCase();
-    const isAuth = isAuthenticationError(err);
-    const isSkew = !isAuth && (err?.code === 'PGRST303' || msg.includes('future') || msg.includes('jwt'));
-    if (isAuth && authRetries > 0) {
+    if (isClockSkewError(err)) {
+      notifyClockSkewDetected();
+      if (retries > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        return withClockSkewRetry(queryFn, retries - 1, authRetries);
+      }
+    }
+    if (isAuthenticationError(err) && authRetries > 0) {
       await refreshSessionOrThrow();
       return withClockSkewRetry(queryFn, retries, authRetries - 1);
-    }
-    if (isSkew && retries > 0) {
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      await supabase.auth.refreshSession().catch(() => {});
-      return withClockSkewRetry(queryFn, retries - 1);
     }
     throw err;
   }

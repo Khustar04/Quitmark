@@ -24,15 +24,39 @@ const getAuthHelpers = async () => {
 };
 
 const runWithSessionRefresh = async (request) => {
-  let response = await request();
-  if (response.error) {
-    const { isAuthenticationError, refreshSessionOrThrow } = await getAuthHelpers();
-    if (isAuthenticationError(response.error)) {
-      await refreshSessionOrThrow();
-      response = await request();
+  let skewRetries = 2;
+  let authRetries = 1;
+
+  while (true) {
+    const response = await request();
+    if (!response.error) {
+      return response;
     }
+
+    const {
+      isClockSkewError,
+      isAuthenticationError,
+      refreshSessionOrThrow,
+      notifyClockSkewDetected,
+    } = await getAuthHelpers();
+
+    if (isClockSkewError(response.error)) {
+      notifyClockSkewDetected();
+      if (skewRetries > 0) {
+        skewRetries--;
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        continue;
+      }
+    }
+
+    if (isAuthenticationError(response.error) && authRetries > 0) {
+      authRetries--;
+      await refreshSessionOrThrow();
+      continue;
+    }
+
+    return response;
   }
-  return response;
 };
 
 const getStorageKey = (userId) => `${STORAGE_PREFIX}${userId}`;

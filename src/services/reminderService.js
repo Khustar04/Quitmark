@@ -1,5 +1,10 @@
 import supabase from '../lib/supabase';
-import { isAuthenticationError, refreshSessionOrThrow } from './authService';
+import {
+  isAuthenticationError,
+  isClockSkewError,
+  notifyClockSkewDetected,
+  refreshSessionOrThrow,
+} from './authService';
 
 let cachedUser = null;
 let cachedUserExpiry = 0;
@@ -54,40 +59,39 @@ const getAuthenticatedUser = async () => {
 };
 
 /**
- * Executes a Supabase query with automatic retry for transient clock skew errors.
+ * Executes a Supabase query with automatic retry for transient clock skew errors
+ * ("JWT issued at future", PGRST303) and expired sessions.
  * (Mirrors habitService pattern)
  */
 const withClockSkewRetry = async (queryFn, retries = 2, authRetries = 1) => {
   try {
     const { data, error } = await queryFn();
     if (error) {
-      const msg = (error.message || error.toString() || '').toLowerCase();
-      const isAuth = isAuthenticationError(error);
-      const isSkew = !isAuth && (error.code === 'PGRST303' || msg.includes('future') || msg.includes('jwt'));
-      if (isAuth && authRetries > 0) {
+      if (isClockSkewError(error)) {
+        notifyClockSkewDetected();
+        if (retries > 0) {
+          await new Promise((resolve) => setTimeout(resolve, 800));
+          return withClockSkewRetry(queryFn, retries - 1, authRetries);
+        }
+      }
+      if (isAuthenticationError(error) && authRetries > 0) {
         await refreshSessionOrThrow();
         return withClockSkewRetry(queryFn, retries, authRetries - 1);
-      }
-      if (isSkew && retries > 0) {
-        await new Promise((resolve) => setTimeout(resolve, 600));
-        await supabase.auth.refreshSession().catch(() => {});
-        return withClockSkewRetry(queryFn, retries - 1);
       }
       throw error;
     }
     return data;
   } catch (err) {
-    const msg = (err?.message || err?.toString() || '').toLowerCase();
-    const isAuth = isAuthenticationError(err);
-    const isSkew = !isAuth && (err?.code === 'PGRST303' || msg.includes('future') || msg.includes('jwt'));
-    if (isAuth && authRetries > 0) {
+    if (isClockSkewError(err)) {
+      notifyClockSkewDetected();
+      if (retries > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        return withClockSkewRetry(queryFn, retries - 1, authRetries);
+      }
+    }
+    if (isAuthenticationError(err) && authRetries > 0) {
       await refreshSessionOrThrow();
       return withClockSkewRetry(queryFn, retries, authRetries - 1);
-    }
-    if (isSkew && retries > 0) {
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      await supabase.auth.refreshSession().catch(() => {});
-      return withClockSkewRetry(queryFn, retries - 1);
     }
     throw err;
   }

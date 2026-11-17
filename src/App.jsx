@@ -23,6 +23,7 @@ import ProtectedRoute from './routes/ProtectedRoute';
 import PublicAuthRoute from './routes/PublicAuthRoute';
 import LoadingScreen from './components/common/LoadingScreen';
 import DashboardSkeleton from './components/skeletons/DashboardSkeleton';
+import ClockSkewBanner from './components/common/ClockSkewBanner';
 
 import RootLayout from './layouts/RootLayout';
 import { isMobileApp } from './utils/platform';
@@ -235,6 +236,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ClockSkewBanner />
       <Suspense fallback={<LoadingScreen />}>
         <Routes>
           {/* 1. Standalone Email Confirmation Routes (No Sidebar, No Navbar, No Footer) */}

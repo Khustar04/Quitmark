@@ -8,6 +8,10 @@ import { Browser } from '@capacitor/browser';
 export const getFriendlyAuthErrorMessage = (error) => {
   if (!error) return 'An unexpected error occurred. Please try again.';
 
+  if (isClockSkewError(error)) {
+    return 'Your device clock is ahead of server time. Please check your system Date & Time settings and synchronize your clock to automatic.';
+  }
+
   const message = (error.message || error.toString() || '').toLowerCase();
 
   if (message.includes('invalid login credentials') || message.includes('invalid credentials')) {
@@ -69,8 +73,50 @@ const withTimeout = (promise, ms = 15000) => {
 
 const pendingAuthRequests = new Map();
 
-/** Returns true only for errors caused by a rejected or expired access token. */
+/**
+ * Dispatches an event to alert the app UI that local system clock drift was detected.
+ */
+export const notifyClockSkewDetected = () => {
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    window.dispatchEvent(new CustomEvent('quitmark:clock-skew'));
+  }
+};
+
+/**
+ * Detects if an error is caused by system clock skew / drift
+ * ("JWT issued at future", PostgREST PGRST303).
+ */
+export const isClockSkewError = (error) => {
+  if (!error) return false;
+  const code = error?.code || '';
+  if (code === 'PGRST303') return true;
+
+  const message = (error?.message || error?.toString?.() || '').toLowerCase();
+  const description = (error?.error_description || error?.description || '').toLowerCase();
+  const details = (error?.details || '').toLowerCase();
+  const hint = (error?.hint || '').toLowerCase();
+
+  return (
+    code === 'PGRST303' ||
+    message.includes('jwt issued at future') ||
+    message.includes('issued at future') ||
+    message.includes('issued in the future') ||
+    (message.includes('future') && message.includes('jwt')) ||
+    description.includes('jwt issued at future') ||
+    description.includes('issued at future') ||
+    details.includes('future') ||
+    hint.includes('future')
+  );
+};
+
+/**
+ * Returns true only for errors caused by a rejected or expired access token.
+ * Clock skew errors ("JWT issued at future") return false because refreshing immediately
+ * does not fix clock skew and can cause false logouts.
+ */
 export const isAuthenticationError = (error) => {
+  if (!error || isClockSkewError(error)) return false;
+
   const status = Number(error?.status);
   const message = (error?.message || error?.toString?.() || '').toLowerCase();
   return status === 401 ||
@@ -258,21 +304,48 @@ export const syncUserTimezone = async () => {
 
   syncTimezonePromise = (async () => {
     try {
-      let { error } = await supabase.rpc('set_my_time_zone', {
-        requested_time_zone: timeZone,
-      });
+      let retries = 2;
+      let authRetries = 1;
+      let result;
 
-      if (error && isAuthenticationError(error)) {
-        await refreshSessionOrThrow();
-        ({ error } = await supabase.rpc('set_my_time_zone', {
+      while (retries >= 0) {
+        result = await supabase.rpc('set_my_time_zone', {
           requested_time_zone: timeZone,
-        }));
+        });
+
+        if (!result.error) {
+          lastSyncedTimezone = timeZone;
+          return;
+        }
+
+        if (isClockSkewError(result.error)) {
+          notifyClockSkewDetected();
+          if (retries > 0) {
+            retries--;
+            await new Promise((resolve) => setTimeout(resolve, 800));
+            continue;
+          }
+        }
+
+        if (isAuthenticationError(result.error) && authRetries > 0) {
+          authRetries--;
+          try {
+            await refreshSessionOrThrow();
+            continue;
+          } catch {
+            break;
+          }
+        }
+
+        break;
       }
 
-      if (error) {
-        console.warn('[Quitmark] Unable to synchronize user time zone:', error);
-      } else {
-        lastSyncedTimezone = timeZone;
+      if (result?.error) {
+        if (isClockSkewError(result.error)) {
+          console.warn('[Quitmark] Clock skew detected during time zone sync: Device clock is ahead of server time.');
+        } else {
+          console.warn('[Quitmark] Unable to synchronize user time zone:', result.error);
+        }
       }
     } finally {
       syncTimezonePromise = null;
