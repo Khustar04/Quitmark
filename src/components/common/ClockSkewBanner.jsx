@@ -8,19 +8,29 @@ export default function ClockSkewBanner() {
 
   useEffect(() => {
     const handleClockSkew = (event) => {
-      setVisible(true);
-      if (event?.detail) {
+      // Only show the banner when genuine measured drift data is present
+      const drift = event?.detail?.driftMs;
+      if (typeof drift === 'number' && drift > 5000) {
+        setVisible(true);
         setSkewDetails(event.detail);
       }
     };
 
+    // Auto-dismiss when the session recovers (token refresh succeeds)
+    const handleSessionRecovered = () => {
+      setVisible(false);
+      setSkewDetails(null);
+    };
+
     if (typeof window !== 'undefined') {
       window.addEventListener('quitmark:clock-skew', handleClockSkew);
+      window.addEventListener('quitmark:session-recovered', handleSessionRecovered);
     }
 
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('quitmark:clock-skew', handleClockSkew);
+        window.removeEventListener('quitmark:session-recovered', handleSessionRecovered);
       }
     };
   }, []);

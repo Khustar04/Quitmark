@@ -12,13 +12,13 @@ import {
 
 test('returns friendly message for clock skew error (JWT issued at future)', () => {
   const result = getFriendlyAuthErrorMessage({ message: 'JWT issued at future' });
-  assert.ok(result.includes('device clock is ahead of server time'));
-  assert.ok(result.includes('Date & Time settings'));
+  assert.ok(result.includes('session could not be verified'));
+  assert.ok(result.includes('Date & Time'));
 });
 
 test('returns friendly message for clock skew error (PGRST303)', () => {
   const result = getFriendlyAuthErrorMessage({ code: 'PGRST303', message: 'invalid token' });
-  assert.ok(result.includes('device clock is ahead of server time'));
+  assert.ok(result.includes('session could not be verified'));
 });
 
 test('returns friendly message for invalid credentials', () => {

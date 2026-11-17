@@ -8,8 +8,13 @@ import { Browser } from '@capacitor/browser';
 export const getFriendlyAuthErrorMessage = (error) => {
   if (!error) return 'An unexpected error occurred. Please try again.';
 
+  // Only show the clock-skew message when we can confirm real drift.
+  // isClockSkewError still returns true for PGRST303/"future" body text,
+  // but that can be a stale token from a previous session — the actual
+  // clock-skew UI banner requires measured drift ≥5s. For user-facing
+  // error strings, fall through to the generic session error instead.
   if (isClockSkewError(error)) {
-    return 'Your device clock is ahead of server time. Please check your system Date & Time settings and synchronize your clock to automatic.';
+    return 'Your session could not be verified. Please try logging in again. If this keeps happening, check that your system Date & Time is set to automatic.';
   }
 
   const message = (error.message || error.toString() || '').toLowerCase();
@@ -74,11 +79,37 @@ const withTimeout = (promise, ms = 15000) => {
 const pendingAuthRequests = new Map();
 
 /**
- * Dispatches an event to alert the app UI that local system clock drift was detected.
+ * Measures the actual clock drift against the Supabase server before dispatching
+ * the clock-skew UI event. Only fires when the measured drift confirms the local
+ * clock is genuinely ≥5 seconds ahead, preventing false positives from stale JWTs.
  */
-export const notifyClockSkewDetected = () => {
-  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-    window.dispatchEvent(new CustomEvent('quitmark:clock-skew'));
+export const notifyClockSkewDetected = async () => {
+  if (typeof window === 'undefined' || typeof window.dispatchEvent !== 'function') return;
+
+  try {
+    // Make a lightweight HEAD request to measure real drift from the Date header
+    const res = await fetch(
+      `${supabase?.supabaseUrl || ''}/rest/v1/`,
+      { method: 'HEAD', headers: { apikey: supabase?.supabaseKey || '' } }
+    ).catch(() => null);
+
+    const serverDateHeader = res?.headers?.get('date');
+    const serverTimeMs = serverDateHeader ? new Date(serverDateHeader).getTime() : 0;
+    const driftMs = serverTimeMs ? Date.now() - serverTimeMs : 0;
+
+    if (driftMs > 5000) {
+      window.dispatchEvent(
+        new CustomEvent('quitmark:clock-skew', {
+          detail: {
+            driftMs,
+            driftSeconds: Math.round(driftMs / 1000),
+            serverDate: serverDateHeader,
+          },
+        })
+      );
+    }
+  } catch {
+    // If the measurement request fails, don't show a false banner
   }
 };
 
@@ -163,6 +194,10 @@ export const refreshSessionOrThrow = async () => {
   if (error || !data?.session?.user) {
     await forceSignOut();
     throw new Error('Your session has expired. Please log in again.');
+  }
+  // Notify that the session recovered (auto-dismiss clock skew banner)
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    window.dispatchEvent(new CustomEvent('quitmark:session-recovered'));
   }
   return data.session;
 };

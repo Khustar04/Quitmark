@@ -17,7 +17,7 @@ export const getFriendlyDbErrorMessage = (error) => {
   if (!error) return 'An unexpected error occurred. Please try again.';
 
   if (isClockSkewError(error)) {
-    return 'Your device clock is ahead of server time. Please check your system Date & Time settings and synchronize your clock to automatic.';
+    return 'Your session could not be verified. Please try logging in again. If this keeps happening, check that your system Date & Time is set to automatic.';
   }
 
   const msg = (error.message || error.toString() || '').toLowerCase();

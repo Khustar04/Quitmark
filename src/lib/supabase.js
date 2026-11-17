@@ -36,18 +36,21 @@ export const supabase =
               try {
                 const clone = response.clone();
                 const bodyText = await clone.text();
-                const authHeader = response.headers.get('www-authenticate') || '';
                 const serverDateHeader = response.headers.get('date');
                 const serverTimeMs = serverDateHeader ? new Date(serverDateHeader).getTime() : 0;
                 const driftMs = serverTimeMs ? Date.now() - serverTimeMs : 0;
 
-                const isSkew =
+                // Only fire clock-skew when the MEASURED drift from the server Date header
+                // confirms the local clock is genuinely ahead (≥5s). Body text alone is
+                // unreliable: a stale JWT from a previous session produces PGRST303/"future"
+                // even when the clock is perfectly synced now.
+                const hasClockSkewBody =
                   bodyText.includes('future') ||
-                  bodyText.includes('PGRST303') ||
-                  authHeader.toLowerCase().includes('future') ||
-                  driftMs > 2500;
+                  bodyText.includes('PGRST303');
 
-                if (isSkew && typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+                const isGenuineClockSkew = hasClockSkewBody && driftMs > 5000;
+
+                if (isGenuineClockSkew && typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
                   window.dispatchEvent(
                     new CustomEvent('quitmark:clock-skew', {
                       detail: {
