@@ -11,6 +11,8 @@ export default defineConfig({
       injectRegister: 'script-defer',
       manifest: false, // Use the existing public/manifest.json from Task 23
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
         navigateFallback: '/index.html',
         // Import custom service worker for Web Push notification handling

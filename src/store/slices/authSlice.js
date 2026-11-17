@@ -22,6 +22,36 @@ const getInitialAuthState = () => {
           const parsed = JSON.parse(raw);
           const user = parsed.user || null;
           if (user && user.id) {
+            // Check if access_token has an iat from the future (e.g. issued prior to a system clock sync)
+            if (parsed.access_token && typeof parsed.access_token === 'string') {
+              try {
+                const parts = parsed.access_token.split('.');
+                if (parts.length === 3) {
+                  const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+                  const payload = JSON.parse(
+                    typeof atob === 'function'
+                      ? atob(base64)
+                      : (globalThis.Buffer?.from(base64, 'base64').toString('utf-8') || '{}')
+                  );
+                  const currentSec = Math.floor(Date.now() / 1000);
+                  if (payload?.iat && payload.iat > currentSec + 2) {
+                    console.warn(
+                      `[Quitmark] Cached session token iat (${payload.iat}) is in the future relative to system clock (${currentSec}). Evicting stale future token.`
+                    );
+                    localStorage.removeItem(key);
+                    return {
+                      user: null,
+                      session: null,
+                      loading: false,
+                      initialized: false,
+                      error: null,
+                    };
+                  }
+                }
+              } catch {
+                // If parsing fails, fall through safely
+              }
+            }
             setActiveUserId(user.id);
             setNotificationUser(user.id);
             return {

@@ -118,6 +118,10 @@ const withClockSkewRetry = async (queryFn, retries = 2, authRetries = 1) => {
         if (retries > 0) {
           // Wait 800ms for database clock to catch up with JWT iat
           await new Promise((resolve) => setTimeout(resolve, 800));
+          // If transient delay wasn't enough, force a token refresh from the server
+          if (retries === 1) {
+            await supabase?.auth?.refreshSession().catch(() => {});
+          }
           return withClockSkewRetry(queryFn, retries - 1, authRetries);
         }
       }
@@ -133,6 +137,9 @@ const withClockSkewRetry = async (queryFn, retries = 2, authRetries = 1) => {
       notifyClockSkewDetected();
       if (retries > 0) {
         await new Promise((resolve) => setTimeout(resolve, 800));
+        if (retries === 1) {
+          await supabase?.auth?.refreshSession().catch(() => {});
+        }
         return withClockSkewRetry(queryFn, retries - 1, authRetries);
       }
     }

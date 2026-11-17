@@ -68,6 +68,9 @@ export async function getLeaderboard(limitCount = 50, { force = false } = {}) {
             notifyClockSkewDetected();
             if (retries > 0) {
               await new Promise((res) => setTimeout(res, 800));
+              if (retries === 1) {
+                await supabase?.auth?.refreshSession().catch(() => {});
+              }
               retries--;
               continue;
             }

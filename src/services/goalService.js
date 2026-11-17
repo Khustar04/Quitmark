@@ -45,6 +45,10 @@ const runWithSessionRefresh = async (request) => {
       if (skewRetries > 0) {
         skewRetries--;
         await new Promise((resolve) => setTimeout(resolve, 800));
+        if (skewRetries === 0) {
+          const supabase = await getSupabaseClient();
+          await supabase?.auth?.refreshSession().catch(() => {});
+        }
         continue;
       }
     }

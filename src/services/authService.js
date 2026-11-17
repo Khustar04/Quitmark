@@ -263,6 +263,32 @@ export const getSession = async () => {
       }
       return { session: null, user: null };
     }
+
+    // Proactively check if the access_token has an iat from the future
+    if (data?.session?.access_token && typeof data.session.access_token === 'string') {
+      try {
+        const parts = data.session.access_token.split('.');
+        if (parts.length === 3) {
+          const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+          const payload = JSON.parse(
+            typeof atob === 'function'
+              ? atob(base64)
+              : (globalThis.Buffer?.from(base64, 'base64').toString('utf-8') || '{}')
+          );
+          const currentSec = Math.floor(Date.now() / 1000);
+          if (payload?.iat && payload.iat > currentSec + 2) {
+            console.warn('[Quitmark] Loaded session token iat is in the future. Forcing immediate refresh.');
+            const { data: refreshed, error: refErr } = await supabase.auth.refreshSession().catch(() => ({ data: {}, error: null }));
+            if (!refErr && refreshed?.session) {
+              return { session: refreshed.session, user: refreshed.session.user || null };
+            }
+          }
+        }
+      } catch {
+        // Fall through safely
+      }
+    }
+
     return { session: data.session, user: data.session?.user || null };
   } catch (err) {
     console.warn('[Quitmark] Unexpected error fetching session:', err);

@@ -22,7 +22,9 @@ import {
   updateHabit,
   deleteHabit,
   getAllUserCheckins,
+  clearCachedUser,
 } from '../services/habitService';
+import supabase from '../lib/supabase';
 import {
   getAllReminders,
   upsertReminder,
@@ -442,6 +444,20 @@ export default function DashboardPage() {
     }
   }, [dispatch, userId, initialized]);
 
+  const handleResyncSession = useCallback(async () => {
+    dispatch(clearError());
+    dispatch(setLoading(true));
+    try {
+      await supabase?.auth?.refreshSession().catch(() => {});
+      clearCachedUser();
+      await loadDashboardData();
+    } catch {
+      window.location.reload();
+    } finally {
+      dispatch(setLoading(false));
+    }
+  }, [dispatch, loadDashboardData]);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadDashboardData();
@@ -827,19 +843,28 @@ export default function DashboardPage() {
       {error && (
         <div
           role="alert"
-          className="mx-4 sm:mx-8 mt-4 p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 text-sm flex items-start justify-between gap-3 shadow-sm"
+          className="mx-4 sm:mx-8 mt-4 p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 text-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm"
         >
           <div className="flex items-center gap-2">
             <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
             <span>{error}</span>
           </div>
-          <button
-            type="button"
-            onClick={() => dispatch(clearError())}
-            className="text-xs font-semibold hover:underline cursor-pointer"
-          >
-            Dismiss
-          </button>
+          <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+            <button
+              type="button"
+              onClick={handleResyncSession}
+              className="px-2.5 py-1 text-xs font-semibold rounded bg-red-500/20 hover:bg-red-500/30 text-red-300 transition-colors cursor-pointer"
+            >
+              Re-sync Session
+            </button>
+            <button
+              type="button"
+              onClick={() => dispatch(clearError())}
+              className="text-xs font-semibold hover:underline cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
 
