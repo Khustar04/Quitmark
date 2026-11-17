@@ -4,10 +4,14 @@ import { Clock, X, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 export default function ClockSkewBanner() {
   const [visible, setVisible] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [skewDetails, setSkewDetails] = useState(null);
 
   useEffect(() => {
-    const handleClockSkew = () => {
+    const handleClockSkew = (event) => {
       setVisible(true);
+      if (event?.detail) {
+        setSkewDetails(event.detail);
+      }
     };
 
     if (typeof window !== 'undefined') {
@@ -20,6 +24,23 @@ export default function ClockSkewBanner() {
       }
     };
   }, []);
+
+  const handleCleanReload = () => {
+    // Evict any stale/future auth tokens from localStorage so reload starts clean
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+            localStorage.removeItem(key);
+          }
+        }
+      } catch {
+        // Fall through
+      }
+      window.location.reload();
+    }
+  };
 
   if (!visible) return null;
 
@@ -37,6 +58,7 @@ export default function ClockSkewBanner() {
           <div>
             <p className="font-semibold text-amber-950 dark:text-amber-100">
               System Clock Out of Sync
+              {skewDetails?.driftSeconds ? ` (Ahead by ~${skewDetails.driftSeconds}s)` : ''}
             </p>
             <p className="text-xs text-amber-800 dark:text-amber-300/90 mt-0.5">
               Your device clock is ahead of global server time (401: JWT issued at future). Please synchronize your system clock to automatic to ensure uninterrupted habit tracking and authentication.
@@ -48,19 +70,19 @@ export default function ClockSkewBanner() {
           <button
             type="button"
             onClick={() => setShowInstructions((prev) => !prev)}
-            className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-100 transition-colors"
+            className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-100 transition-colors cursor-pointer"
           >
             <span>{showInstructions ? 'Hide Steps' : 'How to Fix'}</span>
             {showInstructions ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
           <button
             type="button"
-            onClick={() => window.location.reload()}
-            className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded bg-amber-600 text-white hover:bg-amber-700 transition-colors shadow-xs"
-            title="Reload page after syncing clock"
+            onClick={handleCleanReload}
+            className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded bg-amber-600 text-white hover:bg-amber-700 transition-colors shadow-xs cursor-pointer"
+            title="Clear stale session token and reload page"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>Reload</span>
+            <span>Reset &amp; Reload</span>
           </button>
           <button
             type="button"

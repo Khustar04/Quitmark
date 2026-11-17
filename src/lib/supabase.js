@@ -33,11 +33,34 @@ export const supabase =
           fetch: async (url, options) => {
             const response = await fetch(url, options);
             if (response.status === 401) {
-              const authHeader = response.headers.get('www-authenticate') || '';
-              if (authHeader.toLowerCase().includes('future')) {
-                if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-                  window.dispatchEvent(new CustomEvent('quitmark:clock-skew'));
+              try {
+                const clone = response.clone();
+                const bodyText = await clone.text();
+                const authHeader = response.headers.get('www-authenticate') || '';
+                const serverDateHeader = response.headers.get('date');
+                const serverTimeMs = serverDateHeader ? new Date(serverDateHeader).getTime() : 0;
+                const driftMs = serverTimeMs ? Date.now() - serverTimeMs : 0;
+
+                const isSkew =
+                  bodyText.includes('future') ||
+                  bodyText.includes('PGRST303') ||
+                  authHeader.toLowerCase().includes('future') ||
+                  driftMs > 2500;
+
+                if (isSkew && typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+                  window.dispatchEvent(
+                    new CustomEvent('quitmark:clock-skew', {
+                      detail: {
+                        driftMs,
+                        driftSeconds: driftMs ? Math.round(driftMs / 1000) : null,
+                        serverDate: serverDateHeader,
+                        message: bodyText,
+                      },
+                    })
+                  );
                 }
+              } catch {
+                // If clone/text reading fails, ignore
               }
             }
             return response;
