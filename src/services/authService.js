@@ -69,6 +69,31 @@ const withTimeout = (promise, ms = 15000) => {
 
 const pendingAuthRequests = new Map();
 
+/** Returns true only for errors caused by a rejected or expired access token. */
+export const isAuthenticationError = (error) => {
+  const status = Number(error?.status);
+  const message = (error?.message || error?.toString?.() || '').toLowerCase();
+  return status === 401 ||
+    message.includes('jwt expired') ||
+    message.includes('invalid jwt') ||
+    message.includes('invalid token') ||
+    message.includes('unauthorized') ||
+    message.includes('authentication is required');
+};
+
+/**
+ * Refreshes the session after a Supabase request rejects its access token.
+ * Callers retry exactly once, preventing request loops for revoked sessions.
+ */
+export const refreshSessionOrThrow = async () => {
+  ensureClient();
+  const { data, error } = await supabase.auth.refreshSession();
+  if (error || !data?.session?.user) {
+    throw new Error('Your session has expired. Please log in again.');
+  }
+  return data.session;
+};
+
 const runSingleAuthRequest = (key, request) => {
   let pending = pendingAuthRequests.get(key);
 
@@ -233,9 +258,16 @@ export const syncUserTimezone = async () => {
 
   syncTimezonePromise = (async () => {
     try {
-      const { error } = await supabase.rpc('set_my_time_zone', {
+      let { error } = await supabase.rpc('set_my_time_zone', {
         requested_time_zone: timeZone,
       });
+
+      if (error && isAuthenticationError(error)) {
+        await refreshSessionOrThrow();
+        ({ error } = await supabase.rpc('set_my_time_zone', {
+          requested_time_zone: timeZone,
+        }));
+      }
 
       if (error) {
         console.warn('[Quitmark] Unable to synchronize user time zone:', error);

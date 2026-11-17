@@ -1,5 +1,5 @@
 import supabase from '../lib/supabase';
-import { syncUserTimezone } from './authService';
+import { isAuthenticationError, refreshSessionOrThrow, syncUserTimezone } from './authService';
 import { getLocalDateString } from '../utils/streaks/dateUtils';
 import { invalidateLeaderboardCache } from './leaderboardService';
 import { getHabitCategory } from '../utils/habitCategoryUtils';
@@ -101,12 +101,17 @@ const getAuthenticatedUser = async () => {
  * Executes a Supabase query with automatic retry for transient clock skew
  * ("JWT issued at future", PGRST303) errors.
  */
-const withClockSkewRetry = async (queryFn, retries = 2) => {
+const withClockSkewRetry = async (queryFn, retries = 2, authRetries = 1) => {
   try {
     const { data, error } = await queryFn();
     if (error) {
       const msg = (error.message || error.toString() || '').toLowerCase();
-      const isSkew = error.code === 'PGRST303' || msg.includes('future') || msg.includes('jwt');
+      const isAuth = isAuthenticationError(error);
+      const isSkew = !isAuth && (error.code === 'PGRST303' || msg.includes('future') || msg.includes('jwt'));
+      if (isAuth && authRetries > 0) {
+        await refreshSessionOrThrow();
+        return withClockSkewRetry(queryFn, retries, authRetries - 1);
+      }
       if (isSkew && retries > 0) {
         // Wait 600ms for database clock to catch up with JWT iat
         await new Promise((resolve) => setTimeout(resolve, 600));
@@ -118,7 +123,12 @@ const withClockSkewRetry = async (queryFn, retries = 2) => {
     return data;
   } catch (err) {
     const msg = (err?.message || err?.toString() || '').toLowerCase();
-    const isSkew = err?.code === 'PGRST303' || msg.includes('future') || msg.includes('jwt');
+    const isAuth = isAuthenticationError(err);
+    const isSkew = !isAuth && (err?.code === 'PGRST303' || msg.includes('future') || msg.includes('jwt'));
+    if (isAuth && authRetries > 0) {
+      await refreshSessionOrThrow();
+      return withClockSkewRetry(queryFn, retries, authRetries - 1);
+    }
     if (isSkew && retries > 0) {
       await new Promise((resolve) => setTimeout(resolve, 600));
       await supabase.auth.refreshSession().catch(() => {});

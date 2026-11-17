@@ -57,3 +57,8 @@ GoogleService-Info.plist
 !public/**
 !src/assets/**
 !android/app/src/main/res/**
+
+# Local engineering experiments, generated benchmark output, and Supabase CLI state
+ENGINEERING_EVIDENCE.md
+engineering-evidence/
+supabase/.temp/

@@ -2,6 +2,7 @@ import { getLocalDateString } from '../utils/streaks/dateUtils';
 
 const STORAGE_PREFIX = 'quitmark_goals_';
 let supabaseClientPromise;
+let authHelpersPromise;
 
 const getSupabaseClient = async () => {
   if (!supabaseClientPromise) {
@@ -13,6 +14,25 @@ const getSupabaseClient = async () => {
       });
   }
   return supabaseClientPromise;
+};
+
+const getAuthHelpers = async () => {
+  if (!authHelpersPromise) {
+    authHelpersPromise = import('./authService');
+  }
+  return authHelpersPromise;
+};
+
+const runWithSessionRefresh = async (request) => {
+  let response = await request();
+  if (response.error) {
+    const { isAuthenticationError, refreshSessionOrThrow } = await getAuthHelpers();
+    if (isAuthenticationError(response.error)) {
+      await refreshSessionOrThrow();
+      response = await request();
+    }
+  }
+  return response;
 };
 
 const getStorageKey = (userId) => `${STORAGE_PREFIX}${userId}`;
@@ -130,11 +150,13 @@ export async function getGoals(userId, { force = false } = {}) {
 
   inFlightGoalsPromiseByUser[userId] = (async () => {
     try {
-      const { data, error, status } = await supabase
-        .from('goals')
-        .select('id, user_id, name, icon, category, duration_days, start_date, target_date, habit_ids, description, status, created_at, updated_at')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+      const { data, error, status } = await runWithSessionRefresh(() =>
+        supabase
+          .from('goals')
+          .select('id, user_id, name, icon, category, duration_days, start_date, target_date, habit_ids, description, status, created_at, updated_at')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+      );
 
       if (error) {
         if (status === 404 || error.code === 'PGRST204' || error.code === '42P01' || error.message?.includes('not found')) {
@@ -188,11 +210,13 @@ export async function saveGoal(goal, userId) {
 
   const supabase = await getSupabaseClient();
   if (supabase && !isGoalsTableMissing) {
-    const { data, error, status } = await supabase
-      .from('goals')
-      .upsert(savedGoal, { onConflict: 'id' })
-      .select()
-      .single();
+    const { data, error, status } = await runWithSessionRefresh(() =>
+      supabase
+        .from('goals')
+        .upsert(savedGoal, { onConflict: 'id' })
+        .select()
+        .single()
+    );
     if (!error && data) {
       writeCachedGoals(userId, [data, ...cachedGoals.filter((item) => item.id !== data.id)]);
       invalidateGoalsCache(userId);
@@ -214,7 +238,9 @@ export async function deleteGoal(goalId, userId) {
   if (!userId || !goalId) return false;
   const supabase = await getSupabaseClient();
   if (supabase && !isGoalsTableMissing) {
-    const { error, status } = await supabase.from('goals').delete().eq('id', goalId).eq('user_id', userId);
+    const { error, status } = await runWithSessionRefresh(() =>
+      supabase.from('goals').delete().eq('id', goalId).eq('user_id', userId)
+    );
     if (status === 404 || error?.code === 'PGRST204' || error?.code === '42P01') {
       isGoalsTableMissing = true;
     }

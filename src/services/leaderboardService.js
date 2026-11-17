@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { isAuthenticationError, refreshSessionOrThrow } from './authService';
 
 let cachedLeaderboard = null;
 let cachedLeaderboardLimit = 0;
@@ -51,6 +52,7 @@ export async function getLeaderboard(limitCount = 50, { force = false } = {}) {
   inFlightLeaderboardPromise = (async () => {
     try {
       let retries = 2;
+      let authRetries = 1;
       while (retries >= 0) {
         const { data, error } = await supabase.rpc('get_leaderboard', {
           limit_count: fetchLimit,
@@ -58,7 +60,12 @@ export async function getLeaderboard(limitCount = 50, { force = false } = {}) {
 
         if (error) {
           const msg = (error.message || '').toLowerCase();
-          const isSkew = error.code === 'PGRST303' || msg.includes('jwt') || msg.includes('future');
+          if (isAuthenticationError(error) && authRetries > 0) {
+            await refreshSessionOrThrow();
+            authRetries--;
+            continue;
+          }
+          const isSkew = !isAuthenticationError(error) && (error.code === 'PGRST303' || msg.includes('jwt') || msg.includes('future'));
           if (isSkew && retries > 0) {
             await new Promise((res) => setTimeout(res, 600));
             await supabase.auth.refreshSession().catch(() => {});
